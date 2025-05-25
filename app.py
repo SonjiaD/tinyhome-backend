@@ -115,14 +115,15 @@ with tab1:
 
         with col2:
             st.session_state.weights[col] = st.number_input(
-                # removed the label in the number input
-                #made it invisible
-                label = "", 0.0, 1.0,
+                label="",  # invisible label to prevent error
+                min_value=0.0,
+                max_value=1.0,
                 value=st.session_state.weights[col],
                 step=0.01,
                 key=f"n_{col}",
-                label_visibility="visible"
+                label_visibility="collapsed"  # or "hidden"
             )
+
 
 
 
