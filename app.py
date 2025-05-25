@@ -5,6 +5,14 @@ import folium
 import matplotlib.pyplot as plt
 from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
+from folium.plugins import Fullscreen
+
+# -----------------------------
+#trying to make entire layout full width
+#removes default width cap, makes all tabs span full width
+st.set_page_config(layout = "wide")
+
+# -----------------------------
 
 #trying to add lightweight warm-up endpoint
 import streamlit as st
@@ -86,13 +94,13 @@ if "update" not in st.session_state:
 # -----------------------------
 # 🔄 Tabs
 # -----------------------------
-tab1, tab2, tab3 = st.tabs(["Map", "Data", "About"])
+tab1, tab2, tab3 = st.tabs(["Map", "Data", "Histogram"])
 
 # -----------------------------
 # 🗌️ Tab 1: Map
 # -----------------------------
 with tab1:
-    st.title("Tiny Home Site Selector")
+    # st.title("Tiny Home Site Selector")
 
     st.sidebar.title("Adjust Weights of Features")
 
@@ -160,6 +168,7 @@ with tab1:
             center = [center_geom.y.mean(), center_geom.x.mean()]
 
             m = folium.Map(location=center, zoom_start=13)
+            Fullscreen().add_to(m)
             cluster = MarkerCluster().add_to(m)
 
             for _, row in top_lots.iterrows():
@@ -180,15 +189,9 @@ with tab1:
                         tooltip=f"Rank {row['rank']}"
                     ).add_to(cluster)
 
-            st_folium(m, use_container_width=True, height=750)
+            st_folium(m, use_container_width=True, height=1000)
 
-            # Histogram
-            st.markdown("### Score Distribution (Top 500)")
-            fig, ax = plt.subplots()
-            ax.hist(top_lots["final_score"], bins=30, color="skyblue", edgecolor="black")
-            ax.set_xlabel("Final Score")
-            ax.set_ylabel("Frequency")
-            st.pyplot(fig)
+           
 
         # ✅ Reset update flag to prevent accidental reruns
         st.session_state.update = False
@@ -213,15 +216,16 @@ with tab2:
         st.info("Run the map first to see data.")
 
 # -----------------------------
-# 📄 Tab 3: About
+# 📄 Tab 3: Histogram
 # -----------------------------
 with tab3:
-    st.title("About This Project")
-    st.markdown("""
-    This tool was created as part of a research initiative to identify suitable locations 
-    for tiny home communities in Oakland, California. It uses geospatial data and multi-criteria 
-    decision-making to rank candidate sites based on proximity to critical services like transit, 
-    public housing, and city facilities.
+    col1, col2 = st.columns([1.5, 0.5])  # Adjust width ratio as needed
 
-    Built with Streamlit, Folium, and Python.
-    """)
+    with col1:
+        st.markdown("### Score Distribution of Top 500 Sites")
+        with st.container():
+            fig, ax = plt.subplots()
+            ax.hist(top_lots["final_score"], bins=30, color="skyblue", edgecolor="black")
+            ax.set_xlabel("Final Score")
+            ax.set_ylabel("Frequency")
+            st.pyplot(fig)
