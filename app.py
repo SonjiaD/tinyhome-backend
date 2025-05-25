@@ -7,7 +7,7 @@ from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
 
 # -----------------------------
-# 💄 ChatGPT-style UI
+# 💴 ChatGPT-style UI
 # -----------------------------
 st.markdown("""
     <style>
@@ -48,7 +48,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------------
-# ⚡ Load Data
+# ⚡️ Load Data
 # -----------------------------
 @st.cache_data
 def load_candidates():
@@ -67,7 +67,7 @@ score_cols = [
 ]
 
 # -----------------------------
-# 🎛️ State
+# 🎟️ State
 # -----------------------------
 if "weights" not in st.session_state:
     st.session_state.weights = {col: 0.1 for col in score_cols}
@@ -80,7 +80,7 @@ if "update" not in st.session_state:
 tab1, tab2, tab3 = st.tabs(["Map", "Data", "About"])
 
 # -----------------------------
-# 🗺️ Tab 1: Map
+# 🗌️ Tab 1: Map
 # -----------------------------
 with tab1:
     st.title("Tiny Home Site Selector")
@@ -101,7 +101,7 @@ with tab1:
             )
         with col2:
             st.session_state.weights[col] = st.number_input(
-                "", 0.0, 1.0, value=st.session_state.weights[col],
+                " ", 0.0, 1.0, value=st.session_state.weights[col],
                 step=0.01, key=f"n_{col}", label_visibility="collapsed"
             )
 
@@ -129,8 +129,10 @@ with tab1:
         top_lots = ranked.head(500).copy()
         top_lots["rank"] = top_lots.index + 1
 
-        # Map
-        center = [top_lots.geometry.centroid.y.mean(), top_lots.geometry.centroid.x.mean()]
+        # Map (with corrected projection)
+        center_geom = top_lots.to_crs(epsg=3857).geometry.centroid.to_crs(epsg=4326)
+        center = [center_geom.y.mean(), center_geom.x.mean()]
+
         m = folium.Map(location=center, zoom_start=13)
         cluster = MarkerCluster().add_to(m)
 
