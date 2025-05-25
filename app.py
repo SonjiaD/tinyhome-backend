@@ -101,9 +101,13 @@ with tab1:
             )
         with col2:
             st.session_state.weights[col] = st.number_input(
-                " ", 0.0, 1.0, value=st.session_state.weights[col],
-                step=0.01, key=f"n_{col}", label_visibility="collapsed"
+                "Set weight", 0.0, 1.0,
+                value=st.session_state.weights[col],
+                step=0.01,
+                key=f"n_{col}",
+                label_visibility="collapsed"
             )
+
 
     if st.sidebar.button("Create Map"):
         st.session_state.update = True
