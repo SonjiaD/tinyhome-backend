@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
 from folium.plugins import Fullscreen
+import pydeck as pdk
 
 # -----------------------------
 #trying to make entire layout full width
@@ -100,11 +101,9 @@ tab1, tab2, tab3 = st.tabs(["Map", "Data", "Histogram"])
 # 🗌️ Tab 1: Map
 # -----------------------------
 with tab1:
-    # st.title("Tiny Home Site Selector")
 
     st.sidebar.title("Adjust Weights of Features")
 
-    # Collect new weights from sliders and number inputs
     for col in score_cols:
         label = col.replace("_dist", "").replace("_", " ").title()
         col1, col2 = st.sidebar.columns([3, 1])
@@ -120,7 +119,7 @@ with tab1:
 
         with col2:
             st.session_state.weights[col] = st.number_input(
-                label="",  # No label
+                label="",
                 min_value=0.0,
                 max_value=1.0,
                 value=st.session_state.weights[col],
@@ -129,14 +128,12 @@ with tab1:
                 label_visibility="collapsed"
             )
 
-    # ✅ Recalculate total weight *after* all input values are updated
     total_weight = sum(st.session_state.weights.values())
     st.sidebar.markdown(f"**Total Weight Sum: `{total_weight:.2f}`**")
 
     if abs(total_weight - 1.0) > 0.01:
         st.sidebar.error("Weights must sum to 1")
 
-    # Create Map button
     if st.sidebar.button("Create Map"):
         st.session_state.update = True
 
@@ -145,7 +142,6 @@ with tab1:
     elif abs(total_weight - 1.0) > 0.01:
         st.error("Weights must sum to 1.")
     else:
-        # ✅ Show loading spinner and hide stale output
         with st.spinner("Generating map..."):
             weights = st.session_state.weights
             weight_array = np.array(list(weights.values()))
@@ -163,40 +159,50 @@ with tab1:
             top_lots = ranked.head(500).copy()
             top_lots["rank"] = top_lots.index + 1
 
-            # Map
-            center_geom = top_lots.to_crs(epsg=3857).geometry.centroid.to_crs(epsg=4326)
-            center = [center_geom.y.mean(), center_geom.x.mean()]
+            # Get lat/lon
+            top_lots = top_lots.to_crs(epsg=3857)  # project to meters
+            top_lots["lon"] = top_lots.geometry.centroid.to_crs(epsg=4326).x
+            top_lots["lat"] = top_lots.geometry.centroid.to_crs(epsg=4326).y
 
-            m = folium.Map(location=center, zoom_start=13)
-            Fullscreen().add_to(m)
-            cluster = MarkerCluster().add_to(m)
+            # Center the map
+            center = [top_lots["lat"].mean(), top_lots["lon"].mean()]
 
-            for _, row in top_lots.iterrows():
-                if row.geometry.geom_type == "Point":
-                    popup = folium.Popup(
-                        f"<b>ID:</b> {row.get('id', 'N/A')}<br>"
-                        f"<b>Rank:</b> {row['rank']}<br>"
-                        f"<b>Score:</b> {row['final_score']:.4f}",
-                        max_width=300,
-                    )
-                    folium.CircleMarker(
-                        location=[row.geometry.y, row.geometry.x],
-                        radius=6,
-                        color="blue",
-                        fill=True,
-                        fill_opacity=0.7,
-                        popup=popup,
-                        tooltip=f"Rank {row['rank']}"
-                    ).add_to(cluster)
+            # Pydeck Layer
+            layer = pdk.Layer(
+                "ScatterplotLayer",
+                data=top_lots,
+                get_position='[lon, lat]',
+                get_radius=50,
+                get_fill_color='[0, 102, 204, 160]',
+                pickable=True,
+                tooltip=True
+            )
 
-            st_folium(m, use_container_width=True, height=1000)
+            # Pydeck View
+            view_state = pdk.ViewState(
+                longitude=center[1],
+                latitude=center[0],
+                zoom=13,
+                pitch=0,
+                bearing=0
+            )
 
-           
+            tooltip = {
+                "html": "<b>ID:</b> {id} <br><b>Rank:</b> {rank} <br><b>Score:</b> {final_score}",
+                "style": {
+                    "backgroundColor": "white",
+                    "color": "black"
+                }
+            }
 
-        # ✅ Reset update flag to prevent accidental reruns
+            st.pydeck_chart(pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip=tooltip,
+                map_style="mapbox://styles/mapbox/light-v9"  # can change to 'dark' etc.
+            ))
+
         st.session_state.update = False
-
-
 # -----------------------------
 # 📊 Tab 2: Data
 # -----------------------------
