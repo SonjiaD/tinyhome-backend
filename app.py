@@ -95,15 +95,12 @@ with tab1:
     st.title("Tiny Home Site Selector")
 
     st.sidebar.title("Adjust Weights of Features")
-    total_weight = sum(st.session_state.weights.values())
-    st.sidebar.markdown(f"**Total Weight Sum: `{total_weight:.2f}`**")
-    if abs(total_weight - 1.0) > 0.01:
-        st.sidebar.error("Weights must sum to 1")
 
+    # Collect new weights from sliders and number inputs
     for col in score_cols:
         label = col.replace("_dist", "").replace("_", " ").title()
         col1, col2 = st.sidebar.columns([3, 1])
-        
+
         with col1:
             st.session_state.weights[col] = st.slider(
                 label, 0.0, 1.0,
@@ -115,18 +112,23 @@ with tab1:
 
         with col2:
             st.session_state.weights[col] = st.number_input(
-                label="",  # invisible label to prevent error
+                label="",  # No label
                 min_value=0.0,
                 max_value=1.0,
                 value=st.session_state.weights[col],
                 step=0.01,
                 key=f"n_{col}",
-                label_visibility="collapsed"  # or "hidden"
+                label_visibility="collapsed"
             )
 
+    # ✅ Recalculate total weight *after* all input values are updated
+    total_weight = sum(st.session_state.weights.values())
+    st.sidebar.markdown(f"**Total Weight Sum: `{total_weight:.2f}`**")
 
+    if abs(total_weight - 1.0) > 0.01:
+        st.sidebar.error("Weights must sum to 1")
 
-
+    # Create Map button
     if st.sidebar.button("Create Map"):
         st.session_state.update = True
 
@@ -135,56 +137,62 @@ with tab1:
     elif abs(total_weight - 1.0) > 0.01:
         st.error("Weights must sum to 1.")
     else:
-        weights = st.session_state.weights
-        weight_array = np.array(list(weights.values()))
-        weight_array /= weight_array.sum()
+        # ✅ Show loading spinner and hide stale output
+        with st.spinner("Generating map..."):
+            weights = st.session_state.weights
+            weight_array = np.array(list(weights.values()))
+            weight_array /= weight_array.sum()
 
-        c = candidates.copy()
-        norm_scores = []
-        for col in score_cols:
-            score_col = 1 / (1 + c[col])
-            norm_col = min_max_normalize(score_col)
-            norm_scores.append(norm_col)
+            c = candidates.copy()
+            norm_scores = []
+            for col in score_cols:
+                score_col = 1 / (1 + c[col])
+                norm_col = min_max_normalize(score_col)
+                norm_scores.append(norm_col)
 
-        c["final_score"] = sum(w * s for w, s in zip(weight_array, norm_scores))
-        ranked = c.sort_values("final_score", ascending=False).reset_index(drop=True)
-        top_lots = ranked.head(500).copy()
-        top_lots["rank"] = top_lots.index + 1
+            c["final_score"] = sum(w * s for w, s in zip(weight_array, norm_scores))
+            ranked = c.sort_values("final_score", ascending=False).reset_index(drop=True)
+            top_lots = ranked.head(500).copy()
+            top_lots["rank"] = top_lots.index + 1
 
-        # Map (with corrected projection)
-        center_geom = top_lots.to_crs(epsg=3857).geometry.centroid.to_crs(epsg=4326)
-        center = [center_geom.y.mean(), center_geom.x.mean()]
+            # Map
+            center_geom = top_lots.to_crs(epsg=3857).geometry.centroid.to_crs(epsg=4326)
+            center = [center_geom.y.mean(), center_geom.x.mean()]
 
-        m = folium.Map(location=center, zoom_start=13)
-        cluster = MarkerCluster().add_to(m)
+            m = folium.Map(location=center, zoom_start=13)
+            cluster = MarkerCluster().add_to(m)
 
-        for _, row in top_lots.iterrows():
-            if row.geometry.geom_type == "Point":
-                popup = folium.Popup(
-                    f"<b>ID:</b> {row.get('id', 'N/A')}<br>"
-                    f"<b>Rank:</b> {row['rank']}<br>"
-                    f"<b>Score:</b> {row['final_score']:.4f}",
-                    max_width=300,
-                )
-                folium.CircleMarker(
-                    location=[row.geometry.y, row.geometry.x],
-                    radius=6,
-                    color="blue",
-                    fill=True,
-                    fill_opacity=0.7,
-                    popup=popup,
-                    tooltip=f"Rank {row['rank']}"
-                ).add_to(cluster)
+            for _, row in top_lots.iterrows():
+                if row.geometry.geom_type == "Point":
+                    popup = folium.Popup(
+                        f"<b>ID:</b> {row.get('id', 'N/A')}<br>"
+                        f"<b>Rank:</b> {row['rank']}<br>"
+                        f"<b>Score:</b> {row['final_score']:.4f}",
+                        max_width=300,
+                    )
+                    folium.CircleMarker(
+                        location=[row.geometry.y, row.geometry.x],
+                        radius=6,
+                        color="blue",
+                        fill=True,
+                        fill_opacity=0.7,
+                        popup=popup,
+                        tooltip=f"Rank {row['rank']}"
+                    ).add_to(cluster)
 
-        st_folium(m, use_container_width=True, height=750)
+            st_folium(m, use_container_width=True, height=750)
 
-        # Histogram
-        st.markdown("### Score Distribution (Top 500)")
-        fig, ax = plt.subplots()
-        ax.hist(top_lots["final_score"], bins=30, color="skyblue", edgecolor="black")
-        ax.set_xlabel("Final Score")
-        ax.set_ylabel("Frequency")
-        st.pyplot(fig)
+            # Histogram
+            st.markdown("### Score Distribution (Top 500)")
+            fig, ax = plt.subplots()
+            ax.hist(top_lots["final_score"], bins=30, color="skyblue", edgecolor="black")
+            ax.set_xlabel("Final Score")
+            ax.set_ylabel("Frequency")
+            st.pyplot(fig)
+
+        # ✅ Reset update flag to prevent accidental reruns
+        st.session_state.update = False
+
 
 # -----------------------------
 # 📊 Tab 2: Data
