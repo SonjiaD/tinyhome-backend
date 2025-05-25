@@ -100,7 +100,7 @@ with tab1:
                 value=st.session_state.weights[col],
                 step=0.01,
                 key=f"s_{col}",
-                label_visibility="collapsed"
+                label_visibility="visible"
             )
 
         with col2:
