@@ -96,9 +96,13 @@ with tab1:
         col1, col2 = st.sidebar.columns([3, 1])
         with col1:
             st.session_state.weights[col] = st.slider(
-                label, 0.0, 1.0, value=st.session_state.weights[col],
-                step=0.01, key=f"s_{col}"
+                "Set weight (slider)", 0.0, 1.0,
+                value=st.session_state.weights[col],
+                step=0.01,
+                key=f"s_{col}",
+                label_visibility="collapsed"
             )
+
         with col2:
             st.session_state.weights[col] = st.number_input(
                 "Set weight", 0.0, 1.0,
