@@ -92,26 +92,26 @@ with tab1:
         st.sidebar.error("Weights must sum to 1")
 
     for col in score_cols:
-    label = col.replace("_dist", "").replace("_", " ").title()
-    col1, col2 = st.sidebar.columns([3, 1])
-    
-    with col1:
-        st.session_state.weights[col] = st.slider(
-            label, 0.0, 1.0,
-            value=st.session_state.weights[col],
-            step=0.01,
-            key=f"s_{col}",
-            label_visibility="visible"
-        )
+        label = col.replace("_dist", "").replace("_", " ").title()
+        col1, col2 = st.sidebar.columns([3, 1])
+        
+        with col1:
+            st.session_state.weights[col] = st.slider(
+                label, 0.0, 1.0,
+                value=st.session_state.weights[col],
+                step=0.01,
+                key=f"s_{col}",
+                label_visibility="visible"
+            )
 
-    with col2:
-        st.session_state.weights[col] = st.number_input(
-            label, 0.0, 1.0,
-            value=st.session_state.weights[col],
-            step=0.01,
-            key=f"n_{col}",
-            label_visibility="visible"
-        )
+        with col2:
+            st.session_state.weights[col] = st.number_input(
+                label, 0.0, 1.0,
+                value=st.session_state.weights[col],
+                step=0.01,
+                key=f"n_{col}",
+                label_visibility="visible"
+            )
 
 
 
