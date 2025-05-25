@@ -1,12 +1,9 @@
 import streamlit as st
 import geopandas as gpd
 import numpy as np
-import folium
 import matplotlib.pyplot as plt
-from streamlit_folium import st_folium
-from folium.plugins import MarkerCluster
-from folium.plugins import Fullscreen
 import pydeck as pdk
+import pandas as pd
 
 # -----------------------------
 #trying to make entire layout full width
@@ -167,40 +164,84 @@ with tab1:
             # Center the map
             center = [top_lots["lat"].mean(), top_lots["lon"].mean()]
 
-            # Pydeck Layer
-            layer = pdk.Layer(
+            # Normalize final scores for consistent coloring and size scaling
+            min_score = top_lots["final_score"].min()
+            max_score = top_lots["final_score"].max()
+            score_range = max_score - min_score
+            top_lots["normalized_score"] = (top_lots["final_score"] - min_score) / score_range
+
+            # Define color scale in shades of green (lighter to darker)
+            def score_to_color(score):
+                if score < 0.2:
+                    return [232, 245, 233]
+                elif score < 0.4:
+                    return [200, 230, 201]
+                elif score < 0.6:
+                    return [129, 199, 132]
+                elif score < 0.8:
+                    return [67, 160, 71]
+                else:
+                    return [27, 94, 32]
+
+            top_lots["color"] = top_lots["normalized_score"].apply(score_to_color)
+
+            # Prepare pydeck layer
+            scatter = pdk.Layer(
                 "ScatterplotLayer",
                 data=top_lots,
-                get_position='[lon, lat]',
-                get_radius=50,
-                get_fill_color='[0, 102, 204, 160]',
+                get_position=["lon", "lat"],
+                get_radius=30,  # Reduced from 300 to 30 for less overlap
+                get_fill_color="color",
                 pickable=True,
-                tooltip=True
+                radius_min_pixels=3,
+                radius_max_pixels=10,
+                auto_highlight=True,
             )
 
-            # Pydeck View
+            # View state
             view_state = pdk.ViewState(
-                longitude=center[1],
                 latitude=center[0],
+                longitude=center[1],
                 zoom=13,
                 pitch=0,
-                bearing=0
             )
 
+            # Tooltip with full score
             tooltip = {
-                "html": "<b>ID:</b> {id} <br><b>Rank:</b> {rank} <br><b>Score:</b> {final_score}",
-                "style": {
-                    "backgroundColor": "white",
-                    "color": "black"
-                }
+                "html": "<b>Rank:</b> {rank}<br><b>Score:</b> {final_score}",
+                "style": {"backgroundColor": "white", "color": "#4a6240", "fontSize": "14px"},
             }
 
+
+            # Show map
             st.pydeck_chart(pdk.Deck(
-                layers=[layer],
+                map_style="mapbox://styles/mapbox/light-v9",
                 initial_view_state=view_state,
+                layers=[scatter],
                 tooltip=tooltip,
-                map_style="mapbox://styles/mapbox/light-v9"  # can change to 'dark' etc.
-            ))
+            ), height=800)
+
+            st.markdown("#### Final Score Color Legend")
+            st.markdown("""
+            <div style='display: flex; gap: 18px; font-family: sans-serif; font-size: 14px;'>
+                <div style='display: flex; align-items: center; gap: 6px;'>
+                    <div style='width: 20px; height: 20px; background-color: rgb(232, 245, 233); border: 1px solid #ccc;'></div> 0.0–0.2
+                </div>
+                <div style='display: flex; align-items: center; gap: 6px;'>
+                    <div style='width: 20px; height: 20px; background-color: rgb(200, 230, 201); border: 1px solid #ccc;'></div> 0.2–0.4
+                </div>
+                <div style='display: flex; align-items: center; gap: 6px;'>
+                    <div style='width: 20px; height: 20px; background-color: rgb(129, 199, 132); border: 1px solid #ccc;'></div> 0.4–0.6
+                </div>
+                <div style='display: flex; align-items: center; gap: 6px;'>
+                    <div style='width: 20px; height: 20px; background-color: rgb(67, 160, 71); border: 1px solid #ccc;'></div> 0.6–0.8
+                </div>
+                <div style='display: flex; align-items: center; gap: 6px;'>
+                    <div style='width: 20px; height: 20px; background-color: rgb(27, 94, 32); border: 1px solid #ccc;'></div> 0.8–1.0
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
 
         st.session_state.update = False
 # -----------------------------
@@ -231,7 +272,7 @@ with tab3:
         st.markdown("### Score Distribution of Top 500 Sites")
         with st.container():
             fig, ax = plt.subplots()
-            ax.hist(top_lots["final_score"], bins=30, color="skyblue", edgecolor="black")
+            ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
             ax.set_xlabel("Final Score")
             ax.set_ylabel("Frequency")
             st.pyplot(fig)
