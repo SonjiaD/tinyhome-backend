@@ -95,22 +95,23 @@ with tab1:
         label = col.replace("_dist", "").replace("_", " ").title()
         col1, col2 = st.sidebar.columns([3, 1])
         with col1:
-            st.session_state.weights[col] = st.slider(
-                label, 0.0, 1.0,
-                value=st.session_state.weights[col],
-                step=0.01,
-                key=f"s_{col}",
-                label_visibility="visible"
-            )
+    st.session_state.weights[col] = st.slider(
+        f"{label} (slider)", 0.0, 1.0,
+        value=st.session_state.weights[col],
+        step=0.01,
+        key=f"s_{col}",
+        label_visibility="visible"
+    )
 
-        with col2:
-            st.session_state.weights[col] = st.number_input(
-                label, 0.0, 1.0,
-                value=st.session_state.weights[col],
-                step=0.01,
-                key=f"n_{col}",
-                label_visibility="collapsed"
-            )
+with col2:
+    st.session_state.weights[col] = st.number_input(
+        f"{label} (box)", 0.0, 1.0,
+        value=st.session_state.weights[col],
+        step=0.01,
+        key=f"n_{col}",
+        label_visibility="collapsed"
+    )
+
 
 
     if st.sidebar.button("Create Map"):
