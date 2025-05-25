@@ -11,7 +11,6 @@ import pandas as pd
 st.set_page_config(layout = "wide")
 
 # -----------------------------
-
 #trying to add lightweight warm-up endpoint
 import streamlit as st
 
@@ -98,8 +97,6 @@ tab1, tab2, tab3 = st.tabs(["Map", "Data", "Histogram"])
 # 🗌️ Tab 1: Map
 # -----------------------------
 with tab1:
-
-    
 
     st.sidebar.title("Adjust Weights of Features")
 
@@ -221,54 +218,49 @@ with tab1:
                 initial_view_state=view_state,
                 layers=[scatter],
                 tooltip=tooltip,
-            ), height=800)
+            ), height=585)
 
-            st.markdown("""
-                <div style='position: relative; height: 0;'>
-                <div id="rank-legend" style="
-                    position: absolute;
-                    top: 100px;
-                    right: 30px;
-                    background: rgba(255, 255, 255, 0.95);
-                    padding: 12px 16px;
-                    border: 1px solid #ccc;
-                    border-radius: 10px;
-                    z-index: 1000;
-                    font-size: 13px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                ">
-                    <strong>Rank Color Legend</strong><br><br>
-                    <div><span style='background-color: rgb(27, 94, 32); display:inline-block; width:14px; height:14px; margin-right:8px;'></span>Rank 1–100</div>
-                    <div><span style='background-color: rgb(56, 142, 60); display:inline-block; width:14px; height:14px; margin-right:8px;'></span>Rank 101–200</div>
-                    <div><span style='background-color: rgb(102, 187, 106); display:inline-block; width:14px; height:14px; margin-right:8px;'></span>Rank 201–300</div>
-                    <div><span style='background-color: rgb(165, 214, 167); display:inline-block; width:14px; height:14px; margin-right:8px;'></span>Rank 301–400</div>
-                    <div><span style='background-color: rgb(232, 245, 233); display:inline-block; width:14px; height:14px; margin-right:8px;'></span>Rank 401–500</div>
-                </div>
-                </div>
-                """, unsafe_allow_html=True)
+        st.markdown("""
+            <style>
+            .rank-legend {
+                position: fixed;
+                top: 110px;  /* ⬇ Lowered from 100px to avoid zoom buttons */
+                right: 100px;  /* ⬅ Pulls it slightly inward for alignment */
+                background: rgba(255, 255, 255, 0.95);
+                padding: 12px 16px;
+                border: 1px solid #ccc;
+                border-radius: 10px;
+                z-index: 9999;
+                font-size: 13px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                font-family: sans-serif;
+            }
+            .rank-legend div {
+                display: flex;
+                align-items: center;
+                margin-bottom: 6px;
+            }
+            .rank-legend span {
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                margin-right: 8px;
+                border-radius: 3px;
+                border: 1px solid #999;
+            }
+            </style>
 
-
-            #heatmap for the top 500 sites
-            st.markdown("#### Final Score Color Legend")
-            st.markdown("""
-            <div style='display: flex; gap: 18px; font-family: sans-serif; font-size: 14px;'>
-                <div style='display: flex; align-items: center; gap: 6px;'>
-                    <div style='width: 20px; height: 20px; background-color: rgb(232, 245, 233); border: 1px solid #ccc;'></div> 0.0–0.2
-                </div>
-                <div style='display: flex; align-items: center; gap: 6px;'>
-                    <div style='width: 20px; height: 20px; background-color: rgb(200, 230, 201); border: 1px solid #ccc;'></div> 0.2–0.4
-                </div>
-                <div style='display: flex; align-items: center; gap: 6px;'>
-                    <div style='width: 20px; height: 20px; background-color: rgb(129, 199, 132); border: 1px solid #ccc;'></div> 0.4–0.6
-                </div>
-                <div style='display: flex; align-items: center; gap: 6px;'>
-                    <div style='width: 20px; height: 20px; background-color: rgb(67, 160, 71); border: 1px solid #ccc;'></div> 0.6–0.8
-                </div>
-                <div style='display: flex; align-items: center; gap: 6px;'>
-                    <div style='width: 20px; height: 20px; background-color: rgb(27, 94, 32); border: 1px solid #ccc;'></div> 0.8–1.0
-                </div>
+            <div class="rank-legend">
+            <strong>Rank Color Legend</strong><br><br>
+            <div><span style='background-color: rgb(27, 94, 32);'></span>Rank 1–100</div>
+            <div><span style='background-color: rgb(56, 142, 60);'></span>Rank 101–200</div>
+            <div><span style='background-color: rgb(102, 187, 106);'></span>Rank 201–300</div>
+            <div><span style='background-color: rgb(165, 214, 167);'></span>Rank 301–400</div>
+            <div><span style='background-color: rgb(232, 245, 233);'></span>Rank 401–500</div>
             </div>
             """, unsafe_allow_html=True)
+
+        
 
         st.session_state.update = False
 # -----------------------------
@@ -293,7 +285,7 @@ with tab2:
 # 📄 Tab 3: Histogram
 # -----------------------------
 with tab3:
-    col1, col2 = st.columns([1.5, 0.5])  # Adjust width ratio as needed
+    col1, col2 = st.columns([1.5, 0.5])  # Adjusting width ratio
 
     with col1:
         st.markdown("### Score Distribution of Top 500 Sites")
