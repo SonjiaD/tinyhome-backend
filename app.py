@@ -6,6 +6,15 @@ import matplotlib.pyplot as plt
 from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
 
+#trying to add lightweight warm-up endpoint
+import streamlit as st
+
+if st.query_params.get("warmup") == "true":
+    # Trigger loading of data and run hidden computation
+    _ = load_candidates()
+    st.write("Warmed up!")
+    st.stop()
+
 # -----------------------------
 # 💴 ChatGPT-style UI
 # -----------------------------
@@ -106,7 +115,8 @@ with tab1:
 
         with col2:
             st.session_state.weights[col] = st.number_input(
-                label, 0.0, 1.0,
+                # removed the label in the number input
+                0.0, 1.0,
                 value=st.session_state.weights[col],
                 step=0.01,
                 key=f"n_{col}",
