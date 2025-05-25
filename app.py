@@ -116,7 +116,8 @@ with tab1:
         with col2:
             st.session_state.weights[col] = st.number_input(
                 # removed the label in the number input
-                0.0, 1.0,
+                #made it invisible
+                label = "", 0.0, 1.0,
                 value=st.session_state.weights[col],
                 step=0.01,
                 key=f"n_{col}",
