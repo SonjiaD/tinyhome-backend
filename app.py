@@ -99,6 +99,8 @@ tab1, tab2, tab3 = st.tabs(["Map", "Data", "Histogram"])
 # -----------------------------
 with tab1:
 
+    
+
     st.sidebar.title("Adjust Weights of Features")
 
     for col in score_cols:
@@ -170,20 +172,20 @@ with tab1:
             score_range = max_score - min_score
             top_lots["normalized_score"] = (top_lots["final_score"] - min_score) / score_range
 
-            # Define color scale in shades of green (lighter to darker)
-            def score_to_color(score):
-                if score < 0.2:
-                    return [232, 245, 233]
-                elif score < 0.4:
-                    return [200, 230, 201]
-                elif score < 0.6:
-                    return [129, 199, 132]
-                elif score < 0.8:
-                    return [67, 160, 71]
+            def get_rank_color(rank):
+                if rank <= 100:
+                    return [27, 94, 32]  # Dark green
+                elif rank <= 200:
+                    return [56, 142, 60]
+                elif rank <= 300:
+                    return [102, 187, 106]
+                elif rank <= 400:
+                    return [165, 214, 167]
                 else:
-                    return [27, 94, 32]
+                    return [232, 245, 233]  # Very light green
 
-            top_lots["color"] = top_lots["normalized_score"].apply(score_to_color)
+
+            top_lots["color"] = top_lots["rank"].apply(get_rank_color)
 
             # Prepare pydeck layer
             scatter = pdk.Layer(
@@ -221,6 +223,32 @@ with tab1:
                 tooltip=tooltip,
             ), height=800)
 
+            st.markdown("""
+                <div style='position: relative; height: 0;'>
+                <div id="rank-legend" style="
+                    position: absolute;
+                    top: 100px;
+                    right: 30px;
+                    background: rgba(255, 255, 255, 0.95);
+                    padding: 12px 16px;
+                    border: 1px solid #ccc;
+                    border-radius: 10px;
+                    z-index: 1000;
+                    font-size: 13px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                ">
+                    <strong>Rank Color Legend</strong><br><br>
+                    <div><span style='background-color: rgb(27, 94, 32); display:inline-block; width:14px; height:14px; margin-right:8px;'></span>Rank 1–100</div>
+                    <div><span style='background-color: rgb(56, 142, 60); display:inline-block; width:14px; height:14px; margin-right:8px;'></span>Rank 101–200</div>
+                    <div><span style='background-color: rgb(102, 187, 106); display:inline-block; width:14px; height:14px; margin-right:8px;'></span>Rank 201–300</div>
+                    <div><span style='background-color: rgb(165, 214, 167); display:inline-block; width:14px; height:14px; margin-right:8px;'></span>Rank 301–400</div>
+                    <div><span style='background-color: rgb(232, 245, 233); display:inline-block; width:14px; height:14px; margin-right:8px;'></span>Rank 401–500</div>
+                </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+
+            #heatmap for the top 500 sites
             st.markdown("#### Final Score Color Legend")
             st.markdown("""
             <div style='display: flex; gap: 18px; font-family: sans-serif; font-size: 14px;'>
@@ -241,7 +269,6 @@ with tab1:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-
 
         st.session_state.update = False
 # -----------------------------
