@@ -154,6 +154,7 @@ with tab1:
             ranked = c.sort_values("final_score", ascending=False).reset_index(drop=True)
             top_lots = ranked.head(500).copy()
             top_lots["rank"] = top_lots.index + 1
+            st.session_state.top_lots = top_lots
 
             # Get lat/lon
             top_lots = top_lots.to_crs(epsg=3857)  # project to meters
