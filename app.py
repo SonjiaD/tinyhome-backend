@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pydeck as pdk
 import pandas as pd
+from urllib.parse import parse_qs
+import os
 
 # -----------------------------
 #trying to make entire layout full width
@@ -12,14 +14,12 @@ st.set_page_config(layout = "wide")
 
 # -----------------------------
 #trying to add lightweight warm-up endpoint
-import streamlit as st
-
-if st.query_params.get("warmup") == "true":
-    # Trigger loading of data and run hidden computation
+# Optional warm-up support (advanced use, only for backend triggers)
+query_params = st.query_params
+if query_params.get("warmup", ["false"])[0].lower() == "true":
     _ = load_candidates()
     st.write("Warmed up!")
     st.stop()
-
 # -----------------------------
 # 💴 ChatGPT-style UI
 # -----------------------------
@@ -267,7 +267,8 @@ with tab1:
 # 📊 Tab 2: Data
 # -----------------------------
 with tab2:
-    if st.session_state.update and abs(total_weight - 1.0) < 0.01:
+    if "top_lots" in st.session_state:
+        top_lots = st.session_state.top_lots
         st.markdown("### Top 5 Ranked Sites")
         st.dataframe(top_lots[["id", "rank", "final_score"] + score_cols].head())
 
@@ -284,14 +285,29 @@ with tab2:
 # -----------------------------
 # 📄 Tab 3: Histogram
 # -----------------------------
-with tab3:
-    col1, col2 = st.columns([1.5, 0.5])  # Adjusting width ratio
+# with tab3:
+#     col1, col2 = st.columns([1.5, 0.5])  # Adjusting width ratio
 
-    with col1:
-        st.markdown("### Score Distribution of Top 500 Sites")
-        with st.container():
+#     with col1:
+#         st.markdown("### Score Distribution of Top 500 Sites")
+#         with st.container():
+#             fig, ax = plt.subplots()
+#             ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
+#             ax.set_xlabel("Final Score")
+#             ax.set_ylabel("Frequency")
+#             st.pyplot(fig)
+
+with tab3:
+    if "top_lots" in st.session_state:
+        top_lots = st.session_state.top_lots
+        col1, col2 = st.columns([1.5, 0.5])
+
+        with col1:
+            st.markdown("### Score Distribution of Top 500 Sites")
             fig, ax = plt.subplots()
             ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
             ax.set_xlabel("Final Score")
             ax.set_ylabel("Frequency")
             st.pyplot(fig)
+    else:
+        st.info("Generate map first by clicking 'Create Map'.")
