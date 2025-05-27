@@ -372,6 +372,8 @@ with tab2:
     if "top_lots" in st.session_state:
         top_lots = st.session_state.top_lots.copy()
 
+        st.markdown("## Data")
+
         # Add weights as separate columns
         weight_cols = [f"weight_{col}" for col in score_cols]
         for col in score_cols:
@@ -384,7 +386,6 @@ with tab2:
 
         st.markdown("### Top 5 Ranked Sites")
         st.dataframe(top_lots[["id", "rank", "final_score", "lon", "lat"] + score_cols].head())
-
 
         # Histogram of final scores 500 sites
         st.markdown("### Score Distribution of Top 500 Sites")
@@ -401,17 +402,13 @@ with tab2:
             file_name="top_500_ranked_sites.csv",
             mime="text/csv"
         )
+
     else:
         st.info("Run the map first to see data.")
 
 
 # -----------------------------
-# 🖼️ Tab 4: Gallery
-# -----------------------------
-# -----------------------------
 # 🖼️ Tab 3: Gallery
-
-import streamlit.components.v1 as components
 
 with tab3:
     st.markdown("## Gallery: Explore Shared Tiny Home Maps")
