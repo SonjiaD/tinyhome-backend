@@ -404,15 +404,115 @@ with tab2:
 # -----------------------------
 # 🖼️ Tab 4: Gallery
 # -----------------------------
+# with tab3:
+#     st.markdown("## Gallery: Explore Shared Tiny Home Maps")
+#     st.markdown("""
+#     Welcome to the community gallery!
+
+#     Here, you can see what other users think the best locations for tiny homes are — based on their personal priorities. 
+#     View their slider weights, read a bit about them, and explore their generated map!
+#     """)
+
+#     # Upload form
+#     with st.expander("Upload Your Map"):
+#         with st.form("supabase_upload", clear_on_submit=True):
+#             name = st.text_input("Your Name")
+#             occupation = st.text_input("Occupation")
+#             location = st.text_input("City / Area in Oakland")
+#             uploaded_file = st.file_uploader("Upload CSV file of your map", type=["csv"])
+#             submit = st.form_submit_button("Submit")
+
+#             if submit:
+#                 if uploaded_file and name and location:
+#                     df = pd.read_csv(uploaded_file)
+
+#                     weights = {
+#                         col.replace("weight_", ""): round(df[col].iloc[0], 3)
+#                         for col in df.columns if col.startswith("weight_")
+#                     }
+
+#                     file_id = str(uuid.uuid4())
+#                     file_name = f"{file_id}.csv"
+#                     temp_file_path = os.path.join(os.getcwd(), file_name)
+#                     with open(temp_file_path, "wb") as f:
+#                         f.write(uploaded_file.getbuffer())
+
+#                     storage_response = supabase.storage.from_('maps').upload(
+#                         path=file_name,
+#                         file=temp_file_path,
+#                         file_options={"content-type": "text/csv"}
+#                     )
+
+#                     if storage_response:
+#                         file_url = f"{SUPABASE_URL}/storage/v1/object/public/maps/{file_name}"
+#                         data = {
+#                             "name": name,
+#                             "occupation": occupation,
+#                             "location": location,
+#                             "weights": weights,
+#                             "file_url": file_url
+#                         }
+#                         res = supabase.table("submissions").insert(data).execute()
+#                         if res.data:
+#                             st.success("✅ Submission uploaded successfully!")
+#                         else:
+#                             st.error("❌ Failed to save metadata.")
+#                     else:
+#                         st.error("❌ Upload failed.")
+#                 else:
+#                     st.warning("Please complete all fields and upload a file.")
+
+#     # Load gallery
+#     st.markdown("### Shared Maps")
+
+#     try:
+#         submissions = supabase.table("submissions").select("*").order("created_at", desc=True).execute()
+#         entries = submissions.data
+#     except Exception as e:
+#         st.error(f"Failed to load gallery: {e}")
+#         entries = []
+
+#     if not entries:
+#         st.info("No gallery submissions yet.")
+#     else:
+#         for i in range(0, len(entries), 2):
+#             cols = st.columns(2)
+#             for j in range(2):
+#                 if i + j >= len(entries):
+#                     break
+#                 entry = entries[i + j]
+#                 with cols[j]:
+#                     st.markdown("""
+#                         <div style="border-radius: 12px; padding: 20px; background-color: #f5f7f5;
+#                                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); margin-bottom: 24px;">
+#                     """, unsafe_allow_html=True)
+
+#                     st.markdown(f"""
+#                         <h4 style='margin-bottom: 8px;'>{entry['name']}</h4>
+#                         <p style='margin: 4px 0;'><strong>Job:</strong> {entry['occupation']}</p>
+#                         <p style='margin: 4px 0 12px;'><strong>Area:</strong> {entry['location']}</p>
+#                         <p style='margin-bottom: 6px;'><strong>Weights Used:</strong></p>
+#                     """, unsafe_allow_html=True)
+
+#                     raw_weights = entry.get("weights", {})
+#                     if raw_weights:
+#                         weight_df = pd.DataFrame([
+#                             [col.replace("_dist", "").replace("_", " ").title(), val]
+#                             for col, val in raw_weights.items()
+#                         ], columns=["Feature", "Weight"])
+#                         st.dataframe(weight_df.style.format({"Weight": "{:.2f}"}), use_container_width=True)
+
+#                     st.markdown("</div>", unsafe_allow_html=True)
 with tab3:
     st.markdown("## Gallery: Explore Shared Tiny Home Maps")
     st.markdown("""
     Welcome to the community gallery!  
+
     Here, you can see what other users think the best locations for tiny homes are — based on their personal priorities.  
     View their slider weights, read a bit about them, and explore their generated map!
     """)
 
-    # Upload form
+    # Upload Form
     with st.expander("Upload Your Map"):
         with st.form("upload_form", clear_on_submit=True):
             name = st.text_input("Your Name")
@@ -459,7 +559,6 @@ with tab3:
                 else:
                     st.warning("Please fill in all fields and upload a CSV.")
 
-    # Load and display gallery
     st.markdown("### Shared Maps")
 
     try:
@@ -472,40 +571,42 @@ with tab3:
     if not entries:
         st.info("No gallery submissions yet.")
     else:
-        for i in range(0, len(entries), 2):
-            cols = st.columns(2)
-            for j in range(2):
+        for i in range(0, len(entries), 3):
+            cols = st.columns(3)
+            for j in range(3):
                 if i + j >= len(entries):
                     break
                 entry = entries[i + j]
+
                 with cols[j]:
-                    with st.container():
-                        st.markdown(
-                            """
-                            <div style='
-                                border: 1px solid #e0e0e0;
-                                border-radius: 12px;
-                                padding: 20px;
-                                background-color: #f9f9f9;
-                                box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-                                margin-bottom: 24px;
-                            '>
-                            """, unsafe_allow_html=True
+                    # User Info
+                    st.markdown(f"""
+                    **Name:** {entry['name']}  
+                    **Job:** {entry['occupation']}  
+                    **Area:** {entry['location']}  
+                    """)
+
+                    st.markdown("**Weights Used:**")
+
+                    # Display weights as a readable table
+                    raw_weights = entry.get("weights", {})
+                    if raw_weights:
+                        formatted_weights = {
+                            k.replace("_dist", "").replace("_", " ").title(): v
+                            for k, v in raw_weights.items()
+                        }
+                        df = pd.DataFrame(
+                            list(formatted_weights.items()),
+                            columns=["Feature", "Weight"]
+                        )
+                        st.dataframe(
+                            df.style.format({"Weight": "{:.2f}"}),
+                            use_container_width=True,
+                            hide_index=True
                         )
 
-                        st.markdown(f"**Name:** {entry['name']}  \n**Job:** {entry['occupation']}  \n**Area:** {entry['location']}")
-
-                        weights = entry.get("weights", {})
-                        if weights:
-                            st.markdown("**Weights Used:**")
-                            weight_df = pd.DataFrame([
-                                [k.replace("_dist", "").replace("_", " ").title(), v]
-                                for k, v in weights.items()
-                            ], columns=["Feature", "Weight"])
-                            st.dataframe(weight_df.style.format({"Weight": "{:.2f}"}), use_container_width=True)
-
-                        st.markdown("</div>", unsafe_allow_html=True)
-
+                    # Separator
+                    st.markdown("---")
 
 # -----------------------------
 with tab4:
