@@ -7,8 +7,20 @@ import pandas as pd
 from urllib.parse import parse_qs
 import os
 import json
-
+from supabase import create_client, Client
+import uuid
+from io import BytesIO
 # -----------------------------
+
+# setting up Supabase client
+SUPABASE_URL = "https://sjsgkndenvtzgjihermn.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqc2drbmRlbnZ0emdqaWhlcm1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgzMjM5MjAsImV4cCI6MjA2Mzg5OTkyMH0.AdEST3BzTwIuzcMfWmPZfRZPf4aNhC2xQG8vVWCks50"
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# --------PAGE CONFIG ----------
+# this needs to be at the top of the file
+
 #trying to make entire layout full width
 #removes default width cap, makes all tabs span full width
 st.set_page_config(
@@ -141,15 +153,7 @@ if "update" not in st.session_state:
 # -----------------------------
 # 🔄 Tabs
 # -----------------------------
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["Map", "Data", "Histogram","Gallery", "About"])
-
-# page = st.selectbox("Navigation", ["Map", "Data", "Histogram"], "About", horizontal = True)
-# ---------------------------------
-
-# Rendering Conditional Sidebar (only for map, data, histogram tabs)
-
-
-
+tab1, tab2, tab3, tab4 = st.tabs(["Map", "Data","Gallery", "About"])
 # -----------------------------
 # 🗌️ Tab 1: Map
 # -----------------------------
@@ -285,16 +289,57 @@ with tab1:
                 "style": {"backgroundColor": "white", "color": "#4a6240", "fontSize": "14px"},
             }
 
-
             # Show map
             st.pydeck_chart(pdk.Deck(
                 map_style="mapbox://styles/mapbox/light-v9",
-                #could customize to be a different style if necessary,like if we want terrain. 
+                #could customize to be a different style if necessary, like if we want terrain. 
                 # but since we have data overlay this light version is a good option
                 initial_view_state=view_state,
                 layers=[scatter],
                 tooltip=tooltip,
             ), height=map_height)
+
+            # New legend code
+            st.markdown("""
+            <style>
+            .rank-legend-bar {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 1rem;
+                margin-top: 1rem;
+                padding: 1rem;
+                background: #f5f5f5;
+                border-radius: 8px;
+                font-size: 14px;
+                font-family: sans-serif;
+                border: 1px solid #ddd;
+            }
+
+            .rank-item {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .rank-box {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 1px solid #999;
+            }
+            </style>
+
+            <div class="rank-legend-bar">
+            <div class="rank-item"><div class="rank-box" style="background-color: rgb(27, 94, 32);"></div>Rank 1–100</div>
+            <div class="rank-item"><div class="rank-box" style="background-color: rgb(56, 142, 60);"></div>Rank 101–200</div>
+            <div class="rank-item"><div class="rank-box" style="background-color: rgb(102, 187, 106);"></div>Rank 201–300</div>
+            <div class="rank-item"><div class="rank-box" style="background-color: rgb(165, 214, 167);"></div>Rank 301–400</div>
+            <div class="rank-item"><div class="rank-box" style="background-color: rgb(232, 245, 233);"></div>Rank 401–500</div>
+            </div>
+
+            <br>
+            """, unsafe_allow_html=True)
+
 
             # Optionally save and allow download of HTML snapshot of map
             deck = pdk.Deck(
@@ -304,6 +349,7 @@ with tab1:
                 tooltip=tooltip,
             )
 
+
             # Save to HTML file
             deck.to_html("latest_map.html")
 
@@ -312,86 +358,7 @@ with tab1:
                 st.download_button("Download Map as HTML Snapshot", f.read(), file_name="map_snapshot.html")
 
 
-        # New legend code
-        st.markdown("""
-        <style>
-        .rank-legend-bar {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: flex-start;
-            gap: 1rem;
-            margin-top: 1rem;
-            padding: 1rem;
-            background: #f5f5f5;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: sans-serif;
-            border: 1px solid #ddd;
-        }
-
-        .rank-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .rank-box {
-            width: 18px;
-            height: 18px;
-            border-radius: 4px;
-            border: 1px solid #999;
-        }
-        </style>
-
-        <div class="rank-legend-bar">
-        <div class="rank-item"><div class="rank-box" style="background-color: rgb(27, 94, 32);"></div>Rank 1–100</div>
-        <div class="rank-item"><div class="rank-box" style="background-color: rgb(56, 142, 60);"></div>Rank 101–200</div>
-        <div class="rank-item"><div class="rank-box" style="background-color: rgb(102, 187, 106);"></div>Rank 201–300</div>
-        <div class="rank-item"><div class="rank-box" style="background-color: rgb(165, 214, 167);"></div>Rank 301–400</div>
-        <div class="rank-item"><div class="rank-box" style="background-color: rgb(232, 245, 233);"></div>Rank 401–500</div>
-        </div>
-        """, unsafe_allow_html=True)
-
         
-        #previous legend code, but not used anymore
-        # st.markdown("""
-        #     <style>
-        #     .rank-legend {
-        #         position: fixed;
-        #         top: 110px;  /* ⬇ Lowered from 100px to avoid zoom buttons */
-        #         right: 100px;  /* ⬅ Pulls it slightly inward for alignment */
-        #         background: rgba(255, 255, 255, 0.95);
-        #         padding: 12px 16px;
-        #         border: 1px solid #ccc;
-        #         border-radius: 10px;
-        #         z-index: 9999;
-        #         font-size: 13px;
-        #         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        #         font-family: sans-serif;
-        #     }
-        #     .rank-legend div {
-        #         display: flex;
-        #         align-items: center;
-        #         margin-bottom: 6px;
-        #     }
-        #     .rank-legend span {
-        #         display: inline-block;
-        #         width: 14px;
-        #         height: 14px;
-        #         margin-right: 8px;
-        #         border-radius: 3px;
-        #         border: 1px solid #999;
-        #     }
-        #     </style>
-
-        #     <div class="rank-legend">
-        #     <strong>Rank Color Legend</strong><br><br>
-        #     <div><span style='background-color: rgb(27, 94, 32);'></span>Rank 1–100</div>
-        #     <div><span style='background-color: rgb(56, 142, 60);'></span>Rank 101–200</div>
-        #     <div><span style='background-color: rgb(102, 187, 106);'></span>Rank 201–300</div>
-        #     <div><span style='background-color: rgb(165, 214, 167);'></span>Rank 301–400</div>
-        #     <div><span style='background-color: rgb(232, 245, 233);'></span>Rank 401–500</div>
-        #     </div>
-        #     """, unsafe_allow_html=True)
 
         st.session_state.update = False
 # -----------------------------
@@ -402,6 +369,7 @@ with tab2:
         top_lots = st.session_state.top_lots.copy()
 
         # Add weights as separate columns
+        weight_cols = [f"weight_{col}" for col in score_cols]
         for col in score_cols:
             top_lots[f"weight_{col}"] = st.session_state.weights.get(col, 0)
 
@@ -411,7 +379,16 @@ with tab2:
             top_lots["lat"] = top_lots.geometry.centroid.to_crs(epsg=4326).y
 
         st.markdown("### Top 5 Ranked Sites")
-        st.dataframe(top_lots[["id", "rank", "final_score", "lon","lat"] + score_cols].head())
+        st.dataframe(top_lots[["id", "rank", "final_score", "lon", "lat"] + score_cols].head())
+
+
+        # Histogram of final scores 500 sites
+        st.markdown("### Score Distribution of Top 500 Sites")
+        fig, ax = plt.subplots(figsize=(10, hist_height))
+        ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
+        ax.set_xlabel("Final Score")
+        ax.set_ylabel("Frequency")
+        st.pyplot(fig)  
 
         st.markdown("### Download Full Results")
         st.download_button(
@@ -425,43 +402,10 @@ with tab2:
 
 
 # -----------------------------
-# 📄 Tab 3: Histogram
-# -----------------------------
-
-# with tab3:
-#     if "top_lots" in st.session_state:
-#         top_lots = st.session_state.top_lots
-#         col1, col2 = st.columns([1.5, 0.5])
-
-#         with col1:
-#             st.markdown("### Score Distribution of Top 500 Sites")
-#             fig, ax = plt.subplots()
-#             ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
-#             ax.set_xlabel("Final Score")
-#             ax.set_ylabel("Frequency")
-#             st.pyplot(fig)
-#     else:
-#         st.info("Generate map first by clicking 'Create Map'.")
-with tab3:
-    if "top_lots" in st.session_state:
-        top_lots = st.session_state.top_lots
-        st.markdown("### Score Distribution of Top 500 Sites")
-        fig, ax = plt.subplots(figsize=(10, hist_height))
-        ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
-        ax.set_xlabel("Final Score")
-        ax.set_ylabel("Frequency")
-        st.pyplot(fig)        
-            
-    else:
-        st.info("Generate map first by clicking 'Create Map'.")
-
-# -----------------------------
 # 🖼️ Tab 4: Gallery
+# -----------------------------
 
-GALLERY_DIR = "gallery_submissions"
-os.makedirs(GALLERY_DIR, exist_ok=True)
-
-with tab4:
+with tab3:
     st.markdown("## Gallery: Explore Shared Tiny Home Maps")
     st.markdown("""
     Welcome to the community gallery!
@@ -470,109 +414,153 @@ with tab4:
     View their slider weights, read a bit about them, and explore their generated map!
     """)
 
-    # Upload section
     with st.expander("Upload Your Map"):
-        with st.form("upload_form", clear_on_submit=True):
+        with st.form("supabase_upload", clear_on_submit=True):
             name = st.text_input("Your Name")
             occupation = st.text_input("Occupation")
             location = st.text_input("City / Area in Oakland")
-            uploaded_file = st.file_uploader("Upload your saved map CSV", type=["csv"])
+            uploaded_file = st.file_uploader("Upload CSV file of your map", type=["csv"])
             submit = st.form_submit_button("Submit")
 
             if submit:
                 if uploaded_file and name and location:
-                    entry_id = f"{name.replace(' ', '_')}_{location.replace(' ', '_')}"
-                    file_ext = os.path.splitext(uploaded_file.name)[1]
-                    saved_file_path = os.path.join(GALLERY_DIR, f"{entry_id}{file_ext}")
+                    # Parse uploaded CSV
+                    df = pd.read_csv(uploaded_file)
 
-                    with open(saved_file_path, "wb") as f:
-                        f.write(uploaded_file.read())
-
-                    weights = {}
-                    df = pd.read_csv(saved_file_path)
-                    for col in score_cols:
-                        if col in df.columns:
-                            # Use the average score to infer importance (normalize later)
-                            weights[col] = round(df[col].mean(), 2)
-
-                    metadata = {
-                        "name": name,
-                        "occupation": occupation,
-                        "location": location,
-                        "weights": weights,
-                        "file": saved_file_path,
-                        "ext": file_ext,
+                    # Try to extract weights from columns like weight_transit_dist
+                    weights = {
+                        col.replace("weight_", ""): round(df[col].iloc[0], 3)
+                        for col in df.columns if col.startswith("weight_")
                     }
 
-                    with open(os.path.join(GALLERY_DIR, f"{entry_id}.json"), "w") as f:
-                        json.dump(metadata, f)
+                    # Generate unique file name
+                    file_id = str(uuid.uuid4())
+                    file_name = f"{file_id}.csv"
 
-                    st.success("✅ Map uploaded and added to the gallery!")
+                    # Save uploaded file to a temporary local file
+                    temp_file_path = os.path.join(os.getcwd(), file_name)
+                    with open(temp_file_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+
+                    storage_response = supabase.storage.from_('maps').upload(
+                        path=file_name,
+                        file=temp_file_path,
+                        file_options={"content-type": "text/csv"}
+                    )
+
+                    if not storage_response:
+                        st.error("❌ No response from Supabase upload.")
+                    elif hasattr(storage_response, "data") and storage_response.data is None:
+                        st.error("❌ Upload may have failed: no data returned.")
+                    else:
+                        file_url = f"{SUPABASE_URL}/storage/v1/object/public/maps/{file_name}"
+
+                        #testing to see if the file can be uploaded and accessed
+                        # st.write("Payload going to Supabase:", {
+                        #     "name": name,
+                        #     "occupation": occupation,
+                        #     "location": location,
+                        #     "weights": weights,
+                        #     "file_url": file_url
+                        # })
+
+                        # Insert metadata into DB
+                        insert_response = supabase.table("submissions").insert({
+                            "name": name,
+                            "occupation": occupation,
+                            "location": location,
+                            "weights": weights,
+                            "file_url": file_url
+                        }).execute()
+
+                        data = {
+                            "name": name,
+                            "occupation": occupation,
+                            "location": location,
+                            "weights": weights,
+                            "file_url": file_url
+                        }
+
+                        res = supabase.table("submissions").insert(data).execute()
+
+                        if res.data:
+                            st.success("Submission uploaded successfully!")
+                        else:
+                            st.error("❌ Something went wrong — insert failed.")
+
+
                 else:
-                    st.error("Please fill out all fields and upload a CSV file.")
+                    st.warning("Please complete all fields and upload a file.")
 
+
+    # Load existing submissions
         st.markdown("### Shared Maps")
-    gallery_files = [f for f in os.listdir(GALLERY_DIR) if f.endswith(".json")]
 
-    if not gallery_files:
-        st.info("No gallery maps yet! Be the first to share yours above.")
+    # 🔽 Pull all submissions from Supabase
+    try:
+        submissions = supabase.table("submissions").select("*").order("created_at", desc=True).execute()
+        entries = submissions.data
+    except Exception as e:
+        st.error(f"Failed to load gallery: {e}")
+        entries = []
+
+    if not entries:
+        st.info("No gallery submissions yet.")
     else:
-        for json_file in sorted(gallery_files, reverse=True):
-            with open(os.path.join(GALLERY_DIR, json_file), "r") as f:
-                entry = json.load(f)
-
+        for entry in entries:
             st.markdown("""
-            <div style="border:1px solid #ddd; padding:16px; border-radius:10px; margin-bottom:20px; background:#f9f9f9">
+                <div style="border:1px solid #ddd; padding:16px; border-radius:10px; margin-bottom:20px; background:#f9f9f9">
             """, unsafe_allow_html=True)
 
             st.markdown(f"**Name:** {entry['name']}  \n**Job:** {entry['occupation']}  \n**Area:** {entry['location']}")
 
-            # Clean weight labels
+            # Display weights (relabel nicely)
             raw_weights = entry.get("weights", {})
             pretty_weights = {
                 col.replace("_dist", "").replace("_", " ").title(): val
                 for col, val in raw_weights.items()
             }
-
             if pretty_weights:
                 st.markdown("**Weights Used:**")
                 st.json(pretty_weights)
 
-            # Try displaying the uploaded map from CSV
+            # Try loading and rendering the map from Supabase CSV
             try:
-                df = pd.read_csv(entry["file"])
-                if "lon" in df.columns and "lat" in df.columns:
-                    scatter = pdk.Layer(
-                        "ScatterplotLayer",
-                        data=df,
-                        get_position=["lon", "lat"],
-                        get_radius=30,
-                        get_fill_color=[56, 142, 60],
-                        pickable=False,
-                    )
-                    view_state = pdk.ViewState(
-                        latitude=df["lat"].mean(),
-                        longitude=df["lon"].mean(),
-                        zoom=13,
-                    )
-                    st.pydeck_chart(pdk.Deck(
-                        map_style="mapbox://styles/mapbox/light-v9",
-                        initial_view_state=view_state,
-                        layers=[scatter],
-                    ), height=400)
+                map_url = entry.get("file_url")
+                if map_url:
+                    df = pd.read_csv(map_url)
+
+                    if "lat" in df.columns and "lon" in df.columns:
+                        scatter = pdk.Layer(
+                            "ScatterplotLayer",
+                            data=df,
+                            get_position=["lon", "lat"],
+                            get_radius=30,
+                            get_fill_color=[56, 142, 60],
+                            pickable=False,
+                        )
+                        view_state = pdk.ViewState(
+                            latitude=df["lat"].mean(),
+                            longitude=df["lon"].mean(),
+                            zoom=13,
+                        )
+                        st.pydeck_chart(pdk.Deck(
+                            map_style="mapbox://styles/mapbox/light-v9",
+                            initial_view_state=view_state,
+                            layers=[scatter],
+                        ), height=400)
+                    else:
+                        st.warning("Map could not be rendered: missing lat/lon columns.")
                 else:
-                    st.warning("Map could not be displayed: missing lat/lon columns.")
+                    st.warning("No map URL found.")
             except Exception as e:
                 st.error(f"Could not render map for {entry['name']}. Error: {str(e)}")
 
             st.markdown("</div>", unsafe_allow_html=True)
-
-
-
 # -----------------------------
-with tab5:
+with tab4:
 
-    st.markdown("# About This Tool")
+    st.markdown("## About This Tool")
     st.write("""
     This tool helps identify and rank vacant lots in Oakland, California
     for potential tiny home development. Using multiple spatial
