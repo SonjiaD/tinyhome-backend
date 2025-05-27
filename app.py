@@ -191,18 +191,17 @@ with tab1:
 
     #title and instructions block
     st.markdown("## Ranked Tiny Home Site Map")
-
     st.markdown("""
-    This interactive map displays the **top 500 ranked vacant lots** in Oakland, CA 
-    that may be suitable for tiny home development. You can:
+        This interactive map displays the **top 500 ranked vacant lots** in Oakland, CA 
+        that may be suitable for tiny home development. You can:
 
-    - Adjust the weights of various different criteria using the sidebar.
-    - Click "Create Map" to regenerate rankings.
-    - Hover over any circle to see the site's rank and score.
-    - Darker green = higher ranking (Rank 1–100); lighter = lower (Rank 401–500).
-    - Use the **"Data" tab** to view a table of the top 5 sites and download all 500 as CSV.
-    - View the **"Histogram" tab** to explore the score distribution.
-    """)
+        - Adjust the weights of various different criteria using the sidebar.
+        - Click "Create Map" to regenerate rankings.
+        - Hover over any circle to see the site's rank and score.
+        - Darker green = higher ranking (Rank 1–100); lighter = lower (Rank 401–500).
+        - Use the **"Data" tab** to view a table of the top 5 sites and download all 500 as CSV.
+        - View the **"Histogram" tab** to explore the score distribution.
+        """)
 
 
     #map 
@@ -296,46 +295,86 @@ with tab1:
                 tooltip=tooltip,
             ), height=map_height)
 
-        
+        # New legend code
         st.markdown("""
-            <style>
-            .rank-legend {
-                position: fixed;
-                top: 110px;  /* ⬇ Lowered from 100px to avoid zoom buttons */
-                right: 100px;  /* ⬅ Pulls it slightly inward for alignment */
-                background: rgba(255, 255, 255, 0.95);
-                padding: 12px 16px;
-                border: 1px solid #ccc;
-                border-radius: 10px;
-                z-index: 9999;
-                font-size: 13px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                font-family: sans-serif;
-            }
-            .rank-legend div {
-                display: flex;
-                align-items: center;
-                margin-bottom: 6px;
-            }
-            .rank-legend span {
-                display: inline-block;
-                width: 14px;
-                height: 14px;
-                margin-right: 8px;
-                border-radius: 3px;
-                border: 1px solid #999;
-            }
-            </style>
+        <style>
+        .rank-legend-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: sans-serif;
+            border: 1px solid #ddd;
+        }
 
-            <div class="rank-legend">
-            <strong>Rank Color Legend</strong><br><br>
-            <div><span style='background-color: rgb(27, 94, 32);'></span>Rank 1–100</div>
-            <div><span style='background-color: rgb(56, 142, 60);'></span>Rank 101–200</div>
-            <div><span style='background-color: rgb(102, 187, 106);'></span>Rank 201–300</div>
-            <div><span style='background-color: rgb(165, 214, 167);'></span>Rank 301–400</div>
-            <div><span style='background-color: rgb(232, 245, 233);'></span>Rank 401–500</div>
-            </div>
-            """, unsafe_allow_html=True)
+        .rank-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .rank-box {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid #999;
+        }
+        </style>
+
+        <div class="rank-legend-bar">
+        <div class="rank-item"><div class="rank-box" style="background-color: rgb(27, 94, 32);"></div>Rank 1–100</div>
+        <div class="rank-item"><div class="rank-box" style="background-color: rgb(56, 142, 60);"></div>Rank 101–200</div>
+        <div class="rank-item"><div class="rank-box" style="background-color: rgb(102, 187, 106);"></div>Rank 201–300</div>
+        <div class="rank-item"><div class="rank-box" style="background-color: rgb(165, 214, 167);"></div>Rank 301–400</div>
+        <div class="rank-item"><div class="rank-box" style="background-color: rgb(232, 245, 233);"></div>Rank 401–500</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        
+        #previous legend code, but not used anymore
+        # st.markdown("""
+        #     <style>
+        #     .rank-legend {
+        #         position: fixed;
+        #         top: 110px;  /* ⬇ Lowered from 100px to avoid zoom buttons */
+        #         right: 100px;  /* ⬅ Pulls it slightly inward for alignment */
+        #         background: rgba(255, 255, 255, 0.95);
+        #         padding: 12px 16px;
+        #         border: 1px solid #ccc;
+        #         border-radius: 10px;
+        #         z-index: 9999;
+        #         font-size: 13px;
+        #         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        #         font-family: sans-serif;
+        #     }
+        #     .rank-legend div {
+        #         display: flex;
+        #         align-items: center;
+        #         margin-bottom: 6px;
+        #     }
+        #     .rank-legend span {
+        #         display: inline-block;
+        #         width: 14px;
+        #         height: 14px;
+        #         margin-right: 8px;
+        #         border-radius: 3px;
+        #         border: 1px solid #999;
+        #     }
+        #     </style>
+
+        #     <div class="rank-legend">
+        #     <strong>Rank Color Legend</strong><br><br>
+        #     <div><span style='background-color: rgb(27, 94, 32);'></span>Rank 1–100</div>
+        #     <div><span style='background-color: rgb(56, 142, 60);'></span>Rank 101–200</div>
+        #     <div><span style='background-color: rgb(102, 187, 106);'></span>Rank 201–300</div>
+        #     <div><span style='background-color: rgb(165, 214, 167);'></span>Rank 301–400</div>
+        #     <div><span style='background-color: rgb(232, 245, 233);'></span>Rank 401–500</div>
+        #     </div>
+        #     """, unsafe_allow_html=True)
 
         st.session_state.update = False
 # -----------------------------
