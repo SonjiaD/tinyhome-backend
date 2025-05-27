@@ -13,6 +13,31 @@ import os
 st.set_page_config(layout = "wide")
 
 # -----------------------------
+
+#getting the height of the page
+st.markdown("""
+<script>
+const params = new URLSearchParams(window.location.search);
+if (!params.has("vh")) {
+    params.set("vh", window.innerHeight);
+    window.location.search = params.toString();
+}
+</script>
+""", unsafe_allow_html=True)
+
+vh_param = st.query_params.get("vh", ["700"])[0]
+try:
+    vh = int(vh_param)
+except ValueError:
+    vh = 700  # fallback
+
+
+map_height = int(0.75 * vh)      # 75% of screen for map
+hist_height = int(0.7 * vh / 100)  # inches for matplotlib (approx 100px/in)
+
+
+
+# -----------------------------
 #trying to add lightweight warm-up endpoint
 # Optional warm-up support (advanced use, only for backend triggers)
 query_params = st.query_params
@@ -21,8 +46,29 @@ if query_params.get("warmup", ["false"])[0].lower() == "true":
     st.write("Warmed up!")
     st.stop()
 # -----------------------------
-# 💴 ChatGPT-style UI
+# 💴 UI Style
 # -----------------------------
+
+st.markdown("""
+    <style>
+    html, body, .main, .block-container {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+    }
+    # making sure tabs contanier/inner tab container take up full height
+    
+    section [data-testid="stTab"] > div{
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    </style>
+""", unsafe_allow_html=True)
+            
+
 st.markdown("""
     <style>
     .block-container {
@@ -130,7 +176,7 @@ with tab1:
     if abs(total_weight - 1.0) > 0.01:
         st.sidebar.error("Weights must sum to 1")
 
-    if st.sidebar.button("Create Map"):
+    if st.sidebar.button("Create"):
         st.session_state.update = True
 
     if not st.session_state.update:
@@ -219,7 +265,13 @@ with tab1:
                 initial_view_state=view_state,
                 layers=[scatter],
                 tooltip=tooltip,
-            ), height=585)
+            ), height=map_height)
+
+            # map_container = st.container()
+            # map_height = 0.75 * st.query_params.get("vh", [585])[0] #fallback to 585 height if not provided
+            
+            # with map_container:
+            #     st.pydeck_chart(pdk.Deck(...), height = int(map_height))
 
         st.markdown("""
             <style>
@@ -261,8 +313,6 @@ with tab1:
             </div>
             """, unsafe_allow_html=True)
 
-        
-
         st.session_state.update = False
 # -----------------------------
 # 📊 Tab 2: Data
@@ -286,29 +336,30 @@ with tab2:
 # -----------------------------
 # 📄 Tab 3: Histogram
 # -----------------------------
-# with tab3:
-#     col1, col2 = st.columns([1.5, 0.5])  # Adjusting width ratio
 
-#     with col1:
-#         st.markdown("### Score Distribution of Top 500 Sites")
-#         with st.container():
+# with tab3:
+#     if "top_lots" in st.session_state:
+#         top_lots = st.session_state.top_lots
+#         col1, col2 = st.columns([1.5, 0.5])
+
+#         with col1:
+#             st.markdown("### Score Distribution of Top 500 Sites")
 #             fig, ax = plt.subplots()
 #             ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
 #             ax.set_xlabel("Final Score")
 #             ax.set_ylabel("Frequency")
 #             st.pyplot(fig)
-
+#     else:
+#         st.info("Generate map first by clicking 'Create Map'.")
 with tab3:
     if "top_lots" in st.session_state:
         top_lots = st.session_state.top_lots
-        col1, col2 = st.columns([1.5, 0.5])
-
-        with col1:
-            st.markdown("### Score Distribution of Top 500 Sites")
-            fig, ax = plt.subplots()
-            ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
-            ax.set_xlabel("Final Score")
-            ax.set_ylabel("Frequency")
-            st.pyplot(fig)
+        st.markdown("### Score Distribution of Top 500 Sites")
+        fig, ax = plt.subplots(figsize=(10, hist_height))
+        ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
+        ax.set_xlabel("Final Score")
+        ax.set_ylabel("Frequency")
+        st.pyplot(fig)        
+            
     else:
         st.info("Generate map first by clicking 'Create Map'.")
