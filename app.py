@@ -58,7 +58,7 @@ st.markdown("""
             height: 100vh;
             margin: 0;
             padding: 0;
-            overflow: hidden;
+            overflow-y: auto;
     }
     # making sure tabs contanier/inner tab container take up full height
     
@@ -140,12 +140,14 @@ if "update" not in st.session_state:
 # -----------------------------
 # 🔄 Tabs
 # -----------------------------
-tab1, tab2, tab3 = st.tabs(["Map", "Data", "Histogram"])
+tab1, tab2, tab3, tab4 = st.tabs(["Map", "Data", "Histogram", "About"])
 
 # page = st.selectbox("Navigation", ["Map", "Data", "Histogram"], "About", horizontal = True)
 # ---------------------------------
 
 # Rendering Conditional Sidebar (only for map, data, histogram tabs)
+
+
 
 # -----------------------------
 # 🗌️ Tab 1: Map
@@ -187,6 +189,23 @@ with tab1:
     if st.sidebar.button("Create"):
         st.session_state.update = True
 
+    #title and instructions block
+    st.markdown("## Ranked Tiny Home Site Map")
+
+    st.markdown("""
+    This interactive map displays the **top 500 ranked vacant lots** in Oakland, CA 
+    that may be suitable for tiny home development. You can:
+
+    - Adjust the weights of various different criteria using the sidebar.
+    - Click "Create Map" to regenerate rankings.
+    - Hover over any circle to see the site's rank and score.
+    - Darker green = higher ranking (Rank 1–100); lighter = lower (Rank 401–500).
+    - Use the **"Data" tab** to view a table of the top 5 sites and download all 500 as CSV.
+    - View the **"Histogram" tab** to explore the score distribution.
+    """)
+
+
+    #map 
     if not st.session_state.update:
         st.info("Adjust weights and click 'Create' to generate site rankings.")
     elif abs(total_weight - 1.0) > 0.01:
@@ -368,3 +387,23 @@ with tab3:
             
     else:
         st.info("Generate map first by clicking 'Create Map'.")
+
+# -----------------------------
+with tab4:
+
+    st.markdown("# About This Tool")
+    st.write("""
+    This tool helps identify and rank vacant lots in Oakland, California
+    for potential tiny home development. Using multiple spatial
+    criteria, such as proximity to homeless services, transit, and
+    housing infrastructure. Users can customize weights to explore
+    optimal locations interactively.
+
+    ### Features:
+    - various customizable criteria via sliders
+    - Interactive map with ranked 500 top sites
+    - Downloadable data and score histogram
+    - Clean, responsive design using Streamlit and Pydeck
+
+    Built by Kalyan Lab at UBC with ❤️ for equitable urban planning.
+    """)
