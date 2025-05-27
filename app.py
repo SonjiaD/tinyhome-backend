@@ -6,6 +6,7 @@ import pydeck as pdk
 import pandas as pd
 from urllib.parse import parse_qs
 import os
+import json
 
 # -----------------------------
 #trying to make entire layout full width
@@ -140,7 +141,7 @@ if "update" not in st.session_state:
 # -----------------------------
 # 🔄 Tabs
 # -----------------------------
-tab1, tab2, tab3, tab4 = st.tabs(["Map", "Data", "Histogram", "About"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Map", "Data", "Histogram","Gallery", "About"])
 
 # page = st.selectbox("Navigation", ["Map", "Data", "Histogram"], "About", horizontal = True)
 # ---------------------------------
@@ -428,7 +429,90 @@ with tab3:
         st.info("Generate map first by clicking 'Create Map'.")
 
 # -----------------------------
+# 🖼️ Tab 4: Gallery
+
+
+GALLERY_DIR = "gallery_submissions"
+os.makedirs(GALLERY_DIR, exist_ok=True)
+
 with tab4:
+    st.markdown("## Gallery: Explore Shared Tiny Home Maps")
+
+    # --- Upload Trigger Button ---
+    with st.expander("Upload Your Map"):
+        with st.form("upload_form", clear_on_submit=True):
+            name = st.text_input("Your Name")
+            occupation = st.text_input("Occupation")
+            location = st.text_input("City / Area in Oakland")
+            uploaded_file = st.file_uploader("Upload your saved map CSV or HTML", type=["csv", "html"])
+            submit = st.form_submit_button("Submit")
+
+            if submit:
+                if uploaded_file and name and location:
+                    entry_id = f"{name.replace(' ', '_')}_{location.replace(' ', '_')}"
+                    file_ext = os.path.splitext(uploaded_file.name)[1]
+                    saved_file_path = os.path.join(GALLERY_DIR, f"{entry_id}{file_ext}")
+
+                    with open(saved_file_path, "wb") as f:
+                        f.write(uploaded_file.read())
+
+                    weights = {}
+                    if file_ext == ".csv":
+                        df = pd.read_csv(saved_file_path)
+                        # Try to extract weights from columns that match your score_cols
+                        weights = {col: round(df[col].mean(), 3) for col in score_cols if col in df.columns}
+
+                    metadata = {
+                        "name": name,
+                        "occupation": occupation,
+                        "location": location,
+                        "weights": weights,
+                        "file": saved_file_path,
+                        "ext": file_ext,
+                    }
+
+                    metadata_path = os.path.join(GALLERY_DIR, f"{entry_id}.json")
+                    with open(metadata_path, "w") as f:
+                        json.dump(metadata, f)
+
+                    st.success("✅ Map uploaded and added to the gallery!")
+                else:
+                    st.error("Please fill out all fields and upload a file.")
+
+    # --- Display Gallery Entries ---
+    # st.markdown("### Shared Maps")
+    gallery_files = [f for f in os.listdir(GALLERY_DIR) if f.endswith(".json")]
+
+    if not gallery_files:
+        st.info("No gallery maps yet! Be the first to share yours above.")
+    else:
+        for json_file in gallery_files:
+            with open(os.path.join(GALLERY_DIR, json_file), "r") as f:
+                entry = json.load(f)
+
+            st.markdown(f"**👤 {entry['name']}** — {entry['occupation']}, *{entry['location']}*")
+            if entry["weights"]:
+                st.markdown(f"**Weights:** `{entry['weights']}`")
+
+            if entry["ext"] == ".csv":
+                st.download_button(
+                    label="⬇ Download CSV Map",
+                    data=open(entry["file"], "rb").read(),
+                    file_name=os.path.basename(entry["file"]),
+                    mime="text/csv"
+                )
+            elif entry["ext"] == ".html":
+                with open(entry["file"], "r", encoding="utf-8") as html_file:
+                    html_content = html_file.read()
+                    st.components.v1.html(html_content, height=400, scrolling=True)
+
+            st.markdown("---")
+
+
+
+
+# -----------------------------
+with tab5:
 
     st.markdown("# About This Tool")
     st.write("""
