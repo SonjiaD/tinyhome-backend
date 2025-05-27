@@ -10,7 +10,10 @@ import os
 # -----------------------------
 #trying to make entire layout full width
 #removes default width cap, makes all tabs span full width
-st.set_page_config(layout = "wide")
+st.set_page_config(
+    page_title = "Oakland Tiny Home", 
+    page_icon = "tinyhomefavicon.png",
+    layout = "wide")
 
 # -----------------------------
 
@@ -180,7 +183,7 @@ with tab1:
         st.session_state.update = True
 
     if not st.session_state.update:
-        st.info("Adjust weights and click 'Create Map' to generate site rankings.")
+        st.info("Adjust weights and click 'Create' to generate site rankings.")
     elif abs(total_weight - 1.0) > 0.01:
         st.error("Weights must sum to 1.")
     else:
@@ -262,17 +265,14 @@ with tab1:
             # Show map
             st.pydeck_chart(pdk.Deck(
                 map_style="mapbox://styles/mapbox/light-v9",
+                #could customize to be a different style if necessary,like if we want terrain. 
+                # but since we have data overlay this light version is a good option
                 initial_view_state=view_state,
                 layers=[scatter],
                 tooltip=tooltip,
             ), height=map_height)
 
-            # map_container = st.container()
-            # map_height = 0.75 * st.query_params.get("vh", [585])[0] #fallback to 585 height if not provided
-            
-            # with map_container:
-            #     st.pydeck_chart(pdk.Deck(...), height = int(map_height))
-
+        
         st.markdown("""
             <style>
             .rank-legend {
