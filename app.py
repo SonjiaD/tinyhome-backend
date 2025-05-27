@@ -407,50 +407,41 @@ with tab2:
 with tab3:
     st.markdown("## Gallery: Explore Shared Tiny Home Maps")
     st.markdown("""
-    Welcome to the community gallery!
-
-    Here, you can see what other users think the best locations for tiny homes are — based on their personal priorities. 
+    Welcome to the community gallery!  
+    Here, you can see what other users think the best locations for tiny homes are — based on their personal priorities.  
     View their slider weights, read a bit about them, and explore their generated map!
     """)
 
-    # Upload Section
+    # Upload form
     with st.expander("Upload Your Map"):
-        with st.form("supabase_upload", clear_on_submit=True):
+        with st.form("upload_form", clear_on_submit=True):
             name = st.text_input("Your Name")
             occupation = st.text_input("Occupation")
             location = st.text_input("City / Area in Oakland")
-            uploaded_file = st.file_uploader("Upload CSV file of your map", type=["csv"])
+            uploaded_file = st.file_uploader("Upload your saved map CSV", type=["csv"])
             submit = st.form_submit_button("Submit")
 
             if submit:
                 if uploaded_file and name and location:
                     df = pd.read_csv(uploaded_file)
-
                     weights = {
                         col.replace("weight_", ""): round(df[col].iloc[0], 3)
                         for col in df.columns if col.startswith("weight_")
                     }
-
                     file_id = str(uuid.uuid4())
                     file_name = f"{file_id}.csv"
-
-                    temp_file_path = os.path.join(os.getcwd(), file_name)
-                    with open(temp_file_path, "wb") as f:
+                    temp_path = os.path.join(os.getcwd(), file_name)
+                    with open(temp_path, "wb") as f:
                         f.write(uploaded_file.getbuffer())
 
                     storage_response = supabase.storage.from_('maps').upload(
                         path=file_name,
-                        file=temp_file_path,
+                        file=temp_path,
                         file_options={"content-type": "text/csv"}
                     )
 
-                    if not storage_response:
-                        st.error("❌ No response from Supabase upload.")
-                    elif hasattr(storage_response, "data") and storage_response.data is None:
-                        st.error("❌ Upload may have failed: no data returned.")
-                    else:
+                    if storage_response:
                         file_url = f"{SUPABASE_URL}/storage/v1/object/public/maps/{file_name}"
-
                         data = {
                             "name": name,
                             "occupation": occupation,
@@ -458,24 +449,24 @@ with tab3:
                             "weights": weights,
                             "file_url": file_url
                         }
-
                         res = supabase.table("submissions").insert(data).execute()
-
                         if res.data:
                             st.success("✅ Submission uploaded successfully!")
                         else:
-                            st.error("❌ Something went wrong — insert failed.")
+                            st.error("❌ Failed to save metadata.")
+                    else:
+                        st.error("❌ Upload failed.")
                 else:
-                    st.warning("Please complete all fields and upload a file.")
+                    st.warning("Please fill in all fields and upload a CSV.")
 
-    # Load existing submissions
+    # Load and display gallery
     st.markdown("### Shared Maps")
 
     try:
         submissions = supabase.table("submissions").select("*").order("created_at", desc=True).execute()
         entries = submissions.data
     except Exception as e:
-        st.error(f"Failed to load gallery: {e}")
+        st.error(f"Error loading submissions: {e}")
         entries = []
 
     if not entries:
@@ -488,53 +479,33 @@ with tab3:
                     break
                 entry = entries[i + j]
                 with cols[j]:
-                    st.markdown("""
-                        <div style="border:1px solid #ddd; border-radius:16px; padding:20px; margin-bottom:24px;
-                                     background-color: #fdfdfd; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                    """, unsafe_allow_html=True)
+                    with st.container():
+                        st.markdown(
+                            """
+                            <div style='
+                                border: 1px solid #e0e0e0;
+                                border-radius: 12px;
+                                padding: 20px;
+                                background-color: #f9f9f9;
+                                box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+                                margin-bottom: 24px;
+                            '>
+                            """, unsafe_allow_html=True
+                        )
 
-                    st.markdown(f"**Name:** {entry['name']}  \n**Job:** {entry['occupation']}  \n**Area:** {entry['location']}")
+                        st.markdown(f"**Name:** {entry['name']}  \n**Job:** {entry['occupation']}  \n**Area:** {entry['location']}")
 
-                    weights = entry.get("weights", {})
-                    if weights:
-                        df_weights = pd.DataFrame([
-                            [k.replace("_dist", "").replace("_", " ").title(), v]
-                            for k, v in weights.items()
-                        ], columns=["Feature", "Weight"])
-                        st.markdown("**Weights Used:**")
-                        st.dataframe(df_weights.style.format({"Weight": "{:.2f}"}), use_container_width=True, hide_index=True)
+                        weights = entry.get("weights", {})
+                        if weights:
+                            st.markdown("**Weights Used:**")
+                            weight_df = pd.DataFrame([
+                                [k.replace("_dist", "").replace("_", " ").title(), v]
+                                for k, v in weights.items()
+                            ], columns=["Feature", "Weight"])
+                            st.dataframe(weight_df.style.format({"Weight": "{:.2f}"}), use_container_width=True)
 
-                    try:
-                        map_url = entry.get("file_url")
-                        if map_url:
-                            df = pd.read_csv(map_url)
-                            if "lat" in df.columns and "lon" in df.columns:
-                                scatter = pdk.Layer(
-                                    "ScatterplotLayer",
-                                    data=df,
-                                    get_position=["lon", "lat"],
-                                    get_radius=30,
-                                    get_fill_color=[56, 142, 60],
-                                    pickable=False,
-                                )
-                                view_state = pdk.ViewState(
-                                    latitude=df["lat"].mean(),
-                                    longitude=df["lon"].mean(),
-                                    zoom=13,
-                                )
-                                st.pydeck_chart(pdk.Deck(
-                                    map_style="mapbox://styles/mapbox/light-v9",
-                                    initial_view_state=view_state,
-                                    layers=[scatter],
-                                ), height=300)
-                            else:
-                                st.warning("Map could not be rendered: missing lat/lon columns.")
-                        else:
-                            st.warning("No map URL provided.")
-                    except Exception as e:
-                        st.error(f"Could not render map for {entry['name']}. Error: {str(e)}")
+                        st.markdown("</div>", unsafe_allow_html=True)
 
-                    st.markdown("</div>", unsafe_allow_html=True)
 
 # -----------------------------
 with tab4:
