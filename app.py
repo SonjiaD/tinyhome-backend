@@ -296,6 +296,22 @@ with tab1:
                 tooltip=tooltip,
             ), height=map_height)
 
+            # Optionally save and allow download of HTML snapshot of map
+            deck = pdk.Deck(
+                map_style="mapbox://styles/mapbox/light-v9",
+                initial_view_state=view_state,
+                layers=[scatter],
+                tooltip=tooltip,
+            )
+
+            # Save to HTML file
+            deck.to_html("latest_map.html")
+
+            # Allow download of static HTML map
+            with open("latest_map.html", "rb") as f:
+                st.download_button("Download Map as HTML Snapshot", f.read(), file_name="map_snapshot.html")
+
+
         # New legend code
         st.markdown("""
         <style>
@@ -383,9 +399,19 @@ with tab1:
 # -----------------------------
 with tab2:
     if "top_lots" in st.session_state:
-        top_lots = st.session_state.top_lots
+        top_lots = st.session_state.top_lots.copy()
+
+        # Add weights as separate columns
+        for col in score_cols:
+            top_lots[f"weight_{col}"] = st.session_state.weights.get(col, 0)
+
+        # Add lat/lon if not present
+        if "lat" not in top_lots.columns or "lon" not in top_lots.columns:
+            top_lots["lon"] = top_lots.geometry.centroid.to_crs(epsg=4326).x
+            top_lots["lat"] = top_lots.geometry.centroid.to_crs(epsg=4326).y
+
         st.markdown("### Top 5 Ranked Sites")
-        st.dataframe(top_lots[["id", "rank", "final_score"] + score_cols].head())
+        st.dataframe(top_lots[["id", "rank", "final_score", "lon","lat"] + score_cols].head())
 
         st.markdown("### Download Full Results")
         st.download_button(
@@ -396,6 +422,7 @@ with tab2:
         )
     else:
         st.info("Run the map first to see data.")
+
 
 # -----------------------------
 # 📄 Tab 3: Histogram
@@ -484,7 +511,7 @@ with tab4:
                 else:
                     st.error("Please fill out all fields and upload a CSV file.")
 
-    st.markdown("### Shared Maps")
+        st.markdown("### Shared Maps")
     gallery_files = [f for f in os.listdir(GALLERY_DIR) if f.endswith(".json")]
 
     if not gallery_files:
@@ -494,56 +521,51 @@ with tab4:
             with open(os.path.join(GALLERY_DIR, json_file), "r") as f:
                 entry = json.load(f)
 
-            st.markdown(f"#### Name: {entry['name']}")
-            st.markdown(f"**Job:** {entry['occupation']}")
-            st.markdown(f"**Area:** {entry['location']}")
+            st.markdown("""
+            <div style="border:1px solid #ddd; padding:16px; border-radius:10px; margin-bottom:20px; background:#f9f9f9">
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"**Name:** {entry['name']}  \n**Job:** {entry['occupation']}  \n**Area:** {entry['location']}")
 
             # Clean weight labels
-            renamed_weights = {
+            raw_weights = entry.get("weights", {})
+            pretty_weights = {
                 col.replace("_dist", "").replace("_", " ").title(): val
-                for col, val in entry["weights"].items()
+                for col, val in raw_weights.items()
             }
-            st.markdown("**Slider Weights Used:**")
-            st.json(renamed_weights)
 
-            # Show map visualization (read and generate if needed)
+            if pretty_weights:
+                st.markdown("**Weights Used:**")
+                st.json(pretty_weights)
+
+            # Try displaying the uploaded map from CSV
             try:
                 df = pd.read_csv(entry["file"])
-                if "geometry" in df.columns:
-                    df = gpd.GeoDataFrame(df)
-                    if df.crs is None:
-                        df.set_crs(epsg=4326, inplace=True)
+                if "lon" in df.columns and "lat" in df.columns:
+                    scatter = pdk.Layer(
+                        "ScatterplotLayer",
+                        data=df,
+                        get_position=["lon", "lat"],
+                        get_radius=30,
+                        get_fill_color=[56, 142, 60],
+                        pickable=False,
+                    )
+                    view_state = pdk.ViewState(
+                        latitude=df["lat"].mean(),
+                        longitude=df["lon"].mean(),
+                        zoom=13,
+                    )
+                    st.pydeck_chart(pdk.Deck(
+                        map_style="mapbox://styles/mapbox/light-v9",
+                        initial_view_state=view_state,
+                        layers=[scatter],
+                    ), height=400)
                 else:
-                    geometry = gpd.points_from_xy(df["lon"], df["lat"])
-                    df = gpd.GeoDataFrame(df, geometry=geometry)
-                    df.set_crs(epsg=4326, inplace=True)
-
-                scatter_layer = pdk.Layer(
-                    "ScatterplotLayer",
-                    data=df,
-                    get_position=["lon", "lat"],
-                    get_radius=30,
-                    get_fill_color=[56, 142, 60],
-                    pickable=False,
-                )
-
-                view_state = pdk.ViewState(
-                    latitude=df["lat"].mean(),
-                    longitude=df["lon"].mean(),
-                    zoom=13,
-                )
-
-                st.pydeck_chart(pdk.Deck(
-                    map_style="mapbox://styles/mapbox/light-v9",
-                    initial_view_state=view_state,
-                    layers=[scatter_layer],
-                ), height=400)
-
+                    st.warning("Map could not be displayed: missing lat/lon columns.")
             except Exception as e:
                 st.error(f"Could not render map for {entry['name']}. Error: {str(e)}")
 
-            st.markdown("---")
-
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 
