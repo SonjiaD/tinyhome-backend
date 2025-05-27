@@ -10,6 +10,10 @@ import json
 from supabase import create_client, Client
 import uuid
 from io import BytesIO
+import streamlit.components.v1 as components
+from streamlit.components.v1 import html
+
+
 # -----------------------------
 
 # setting up Supabase client
@@ -404,121 +408,26 @@ with tab2:
 # -----------------------------
 # 🖼️ Tab 4: Gallery
 # -----------------------------
-# with tab3:
-#     st.markdown("## Gallery: Explore Shared Tiny Home Maps")
-#     st.markdown("""
-#     Welcome to the community gallery!
+# -----------------------------
+# 🖼️ Tab 3: Gallery
 
-#     Here, you can see what other users think the best locations for tiny homes are — based on their personal priorities. 
-#     View their slider weights, read a bit about them, and explore their generated map!
-#     """)
+import streamlit.components.v1 as components
 
-#     # Upload form
-#     with st.expander("Upload Your Map"):
-#         with st.form("supabase_upload", clear_on_submit=True):
-#             name = st.text_input("Your Name")
-#             occupation = st.text_input("Occupation")
-#             location = st.text_input("City / Area in Oakland")
-#             uploaded_file = st.file_uploader("Upload CSV file of your map", type=["csv"])
-#             submit = st.form_submit_button("Submit")
-
-#             if submit:
-#                 if uploaded_file and name and location:
-#                     df = pd.read_csv(uploaded_file)
-
-#                     weights = {
-#                         col.replace("weight_", ""): round(df[col].iloc[0], 3)
-#                         for col in df.columns if col.startswith("weight_")
-#                     }
-
-#                     file_id = str(uuid.uuid4())
-#                     file_name = f"{file_id}.csv"
-#                     temp_file_path = os.path.join(os.getcwd(), file_name)
-#                     with open(temp_file_path, "wb") as f:
-#                         f.write(uploaded_file.getbuffer())
-
-#                     storage_response = supabase.storage.from_('maps').upload(
-#                         path=file_name,
-#                         file=temp_file_path,
-#                         file_options={"content-type": "text/csv"}
-#                     )
-
-#                     if storage_response:
-#                         file_url = f"{SUPABASE_URL}/storage/v1/object/public/maps/{file_name}"
-#                         data = {
-#                             "name": name,
-#                             "occupation": occupation,
-#                             "location": location,
-#                             "weights": weights,
-#                             "file_url": file_url
-#                         }
-#                         res = supabase.table("submissions").insert(data).execute()
-#                         if res.data:
-#                             st.success("✅ Submission uploaded successfully!")
-#                         else:
-#                             st.error("❌ Failed to save metadata.")
-#                     else:
-#                         st.error("❌ Upload failed.")
-#                 else:
-#                     st.warning("Please complete all fields and upload a file.")
-
-#     # Load gallery
-#     st.markdown("### Shared Maps")
-
-#     try:
-#         submissions = supabase.table("submissions").select("*").order("created_at", desc=True).execute()
-#         entries = submissions.data
-#     except Exception as e:
-#         st.error(f"Failed to load gallery: {e}")
-#         entries = []
-
-#     if not entries:
-#         st.info("No gallery submissions yet.")
-#     else:
-#         for i in range(0, len(entries), 2):
-#             cols = st.columns(2)
-#             for j in range(2):
-#                 if i + j >= len(entries):
-#                     break
-#                 entry = entries[i + j]
-#                 with cols[j]:
-#                     st.markdown("""
-#                         <div style="border-radius: 12px; padding: 20px; background-color: #f5f7f5;
-#                                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); margin-bottom: 24px;">
-#                     """, unsafe_allow_html=True)
-
-#                     st.markdown(f"""
-#                         <h4 style='margin-bottom: 8px;'>{entry['name']}</h4>
-#                         <p style='margin: 4px 0;'><strong>Job:</strong> {entry['occupation']}</p>
-#                         <p style='margin: 4px 0 12px;'><strong>Area:</strong> {entry['location']}</p>
-#                         <p style='margin-bottom: 6px;'><strong>Weights Used:</strong></p>
-#                     """, unsafe_allow_html=True)
-
-#                     raw_weights = entry.get("weights", {})
-#                     if raw_weights:
-#                         weight_df = pd.DataFrame([
-#                             [col.replace("_dist", "").replace("_", " ").title(), val]
-#                             for col, val in raw_weights.items()
-#                         ], columns=["Feature", "Weight"])
-#                         st.dataframe(weight_df.style.format({"Weight": "{:.2f}"}), use_container_width=True)
-
-#                     st.markdown("</div>", unsafe_allow_html=True)
 with tab3:
     st.markdown("## Gallery: Explore Shared Tiny Home Maps")
     st.markdown("""
-    Welcome to the community gallery!  
+    Welcome to the community gallery!
 
-    Here, you can see what other users think the best locations for tiny homes are — based on their personal priorities.  
+    Here, you can see what other users think the best locations for tiny homes are — based on their personal priorities. 
     View their slider weights, read a bit about them, and explore their generated map!
     """)
 
-    # Upload Form
     with st.expander("Upload Your Map"):
-        with st.form("upload_form", clear_on_submit=True):
+        with st.form("supabase_upload", clear_on_submit=True):
             name = st.text_input("Your Name")
             occupation = st.text_input("Occupation")
             location = st.text_input("City / Area in Oakland")
-            uploaded_file = st.file_uploader("Upload your saved map CSV", type=["csv"])
+            uploaded_file = st.file_uploader("Upload CSV file of your map", type=["csv"])
             submit = st.form_submit_button("Submit")
 
             if submit:
@@ -530,17 +439,21 @@ with tab3:
                     }
                     file_id = str(uuid.uuid4())
                     file_name = f"{file_id}.csv"
-                    temp_path = os.path.join(os.getcwd(), file_name)
-                    with open(temp_path, "wb") as f:
+                    temp_file_path = os.path.join(os.getcwd(), file_name)
+                    with open(temp_file_path, "wb") as f:
                         f.write(uploaded_file.getbuffer())
 
                     storage_response = supabase.storage.from_('maps').upload(
                         path=file_name,
-                        file=temp_path,
+                        file=temp_file_path,
                         file_options={"content-type": "text/csv"}
                     )
 
-                    if storage_response:
+                    if not storage_response:
+                        st.error("❌ No response from Supabase upload.")
+                    elif hasattr(storage_response, "data") and storage_response.data is None:
+                        st.error("❌ Upload may have failed: no data returned.")
+                    else:
                         file_url = f"{SUPABASE_URL}/storage/v1/object/public/maps/{file_name}"
                         data = {
                             "name": name,
@@ -551,13 +464,11 @@ with tab3:
                         }
                         res = supabase.table("submissions").insert(data).execute()
                         if res.data:
-                            st.success("✅ Submission uploaded successfully!")
+                            st.success("Submission uploaded successfully!")
                         else:
-                            st.error("❌ Failed to save metadata.")
-                    else:
-                        st.error("❌ Upload failed.")
+                            st.error("❌ Something went wrong — insert failed.")
                 else:
-                    st.warning("Please fill in all fields and upload a CSV.")
+                    st.warning("Please complete all fields and upload a file.")
 
     st.markdown("### Shared Maps")
 
@@ -565,48 +476,102 @@ with tab3:
         submissions = supabase.table("submissions").select("*").order("created_at", desc=True).execute()
         entries = submissions.data
     except Exception as e:
-        st.error(f"Error loading submissions: {e}")
+        st.error(f"Failed to load gallery: {e}")
         entries = []
 
     if not entries:
         st.info("No gallery submissions yet.")
     else:
-        for i in range(0, len(entries), 3):
-            cols = st.columns(3)
-            for j in range(3):
-                if i + j >= len(entries):
-                    break
-                entry = entries[i + j]
+        cols = st.columns(3)
+        for i, entry in enumerate(entries):
+            col = cols[i % 3]
 
-                with cols[j]:
-                    # User Info
-                    st.markdown(f"""
-                    **Name:** {entry['name']}  
-                    **Job:** {entry['occupation']}  
-                    **Area:** {entry['location']}  
-                    """)
+            with col:
+                weights = entry.get("weights", {})
+                pretty_weights = {
+                    k.replace("_dist", "").replace("_", " ").title(): v
+                    for k, v in weights.items()
+                }
+                weight_df = pd.DataFrame(list(pretty_weights.items()), columns=["Feature", "Weight"])
+                weight_table_html = weight_df.to_html(index=False)
 
-                    st.markdown("**Weights Used:**")
+                html = f"""
+                <div style="
+                    background-color: #f9fafb;
+                    border: 1px solid #ddd;
+                    border-radius: 12px;
+                    padding: 16px;
+                    margin-bottom: 16px;
+                    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+                    font-family: sans-serif;
+                ">
+                    <p><strong>Name:</strong> {entry['name']}</p>
+                    <p><strong>Job:</strong> {entry['occupation']}</p>
+                    <p><strong>Area:</strong> {entry['location']}</p>
+                    <p><strong>Weights Used:</strong></p>
+                    {weight_table_html}
+                </div>
+                """
+                from streamlit.components.v1 import html
 
-                    # Display weights as a readable table
-                    raw_weights = entry.get("weights", {})
-                    if raw_weights:
-                        formatted_weights = {
-                            k.replace("_dist", "").replace("_", " ").title(): v
-                            for k, v in raw_weights.items()
-                        }
-                        df = pd.DataFrame(
-                            list(formatted_weights.items()),
-                            columns=["Feature", "Weight"]
-                        )
-                        st.dataframe(
-                            df.style.format({"Weight": "{:.2f}"}),
-                            use_container_width=True,
-                            hide_index=True
-                        )
+from streamlit.components.v1 import html
 
-                    # Separator
-                    st.markdown("---")
+for i in range(0, len(entries), 3):
+    row = st.columns(3)
+    for j in range(3):
+        if i + j >= len(entries):
+            break
+        entry = entries[i + j]
+        name = entry["name"]
+        occupation = entry["occupation"]
+        location = entry["location"]
+        weights = entry.get("weights", {})
+
+        # HTML Table rows
+        table_rows = "".join(
+            f"<tr><td>{k.replace('_dist', '').replace('_', ' ').title()}</td><td style='text-align:right;'>{v:.2f}</td></tr>"
+            for k, v in weights.items()
+        )
+
+        # Single card block
+        card_html = f"""
+        <div style="
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #ffffff;
+            border: 1px solid #e6e6e6;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+        ">
+            <p style="margin: 4px 0;"><strong>Name:</strong> {name}</p>
+            <p style="margin: 4px 0;"><strong>Job:</strong> {occupation}</p>
+            <p style="margin: 8px 0;"><strong>Area:</strong> {location}</p>
+
+            <p style="margin-top: 14px; font-weight: 600;">Weights Used:</p>
+            <table style="
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 14px;
+                margin-top: 6px;
+            ">
+                <thead>
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <th style="text-align:left; padding: 4px;">Feature</th>
+                        <th style="text-align:right; padding: 4px;">Weight</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {table_rows}
+                </tbody>
+            </table>
+        </div>
+        """
+        with row[j]:
+            html(card_html, height=270)
+
+
+
 
 # -----------------------------
 with tab4:
