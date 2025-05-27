@@ -404,7 +404,6 @@ with tab2:
 # -----------------------------
 # 🖼️ Tab 4: Gallery
 # -----------------------------
-
 with tab3:
     st.markdown("## Gallery: Explore Shared Tiny Home Maps")
     st.markdown("""
@@ -414,6 +413,7 @@ with tab3:
     View their slider weights, read a bit about them, and explore their generated map!
     """)
 
+    # Upload Section
     with st.expander("Upload Your Map"):
         with st.form("supabase_upload", clear_on_submit=True):
             name = st.text_input("Your Name")
@@ -424,20 +424,16 @@ with tab3:
 
             if submit:
                 if uploaded_file and name and location:
-                    # Parse uploaded CSV
                     df = pd.read_csv(uploaded_file)
 
-                    # Try to extract weights from columns like weight_transit_dist
                     weights = {
                         col.replace("weight_", ""): round(df[col].iloc[0], 3)
                         for col in df.columns if col.startswith("weight_")
                     }
 
-                    # Generate unique file name
                     file_id = str(uuid.uuid4())
                     file_name = f"{file_id}.csv"
 
-                    # Save uploaded file to a temporary local file
                     temp_file_path = os.path.join(os.getcwd(), file_name)
                     with open(temp_file_path, "wb") as f:
                         f.write(uploaded_file.getbuffer())
@@ -455,24 +451,6 @@ with tab3:
                     else:
                         file_url = f"{SUPABASE_URL}/storage/v1/object/public/maps/{file_name}"
 
-                        #testing to see if the file can be uploaded and accessed
-                        # st.write("Payload going to Supabase:", {
-                        #     "name": name,
-                        #     "occupation": occupation,
-                        #     "location": location,
-                        #     "weights": weights,
-                        #     "file_url": file_url
-                        # })
-
-                        # Insert metadata into DB
-                        insert_response = supabase.table("submissions").insert({
-                            "name": name,
-                            "occupation": occupation,
-                            "location": location,
-                            "weights": weights,
-                            "file_url": file_url
-                        }).execute()
-
                         data = {
                             "name": name,
                             "occupation": occupation,
@@ -484,30 +462,25 @@ with tab3:
                         res = supabase.table("submissions").insert(data).execute()
 
                         if res.data:
-                            st.success("Submission uploaded successfully!")
+                            st.success("✅ Submission uploaded successfully!")
                         else:
                             st.error("❌ Something went wrong — insert failed.")
-
-
                 else:
                     st.warning("Please complete all fields and upload a file.")
-
 
     # Load existing submissions
     st.markdown("### Shared Maps")
 
-    # 🔽 Pull all submissions from Supabase
     try:
         submissions = supabase.table("submissions").select("*").order("created_at", desc=True).execute()
         entries = submissions.data
     except Exception as e:
         st.error(f"Failed to load gallery: {e}")
         entries = []
-      
+
     if not entries:
         st.info("No gallery submissions yet.")
     else:
-        
         for i in range(0, len(entries), 2):
             cols = st.columns(2)
             for j in range(2):
@@ -515,178 +488,54 @@ with tab3:
                     break
                 entry = entries[i + j]
                 with cols[j]:
-                        for i in range(0, len(entries), 2):
-                            cols = st.columns(2)
-                            for j in range(2):
-                                if i + j >= len(entries):
-                                    break
-                                entry = entries[i + j]
+                    st.markdown("""
+                        <div style="border:1px solid #ddd; border-radius:16px; padding:20px; margin-bottom:24px;
+                                     background-color: #fdfdfd; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    """, unsafe_allow_html=True)
 
-                                with cols[j]:
-                                    st.markdown("### " + entry["name"])
-                                    st.write(f"**Job:** {entry['occupation']}")
-                                    st.write(f"**Area:** {entry['location']}")
+                    st.markdown(f"**Name:** {entry['name']}  \n**Job:** {entry['occupation']}  \n**Area:** {entry['location']}")
 
-                                    raw_weights = entry.get("weights", {})
-                                    if raw_weights:
-                                        weight_df = pd.DataFrame([
-                                            [col.replace("_dist", "").replace("_", " ").title(), val]
-                                            for col, val in raw_weights.items()
-                                        ], columns=["Feature", "Weight"])
-                                        st.markdown("**Weights Used:**")
-                                        st.dataframe(
-                                            weight_df.style.format({"Weight": "{:.2f}"}),
-                                            use_container_width=True,
-                                            hide_index=True
-                                        )
+                    weights = entry.get("weights", {})
+                    if weights:
+                        df_weights = pd.DataFrame([
+                            [k.replace("_dist", "").replace("_", " ").title(), v]
+                            for k, v in weights.items()
+                        ], columns=["Feature", "Weight"])
+                        st.markdown("**Weights Used:**")
+                        st.dataframe(df_weights.style.format({"Weight": "{:.2f}"}), use_container_width=True, hide_index=True)
 
-                                    try:
-                                        map_url = entry.get("file_url")
-                                        if map_url:
-                                            df = pd.read_csv(map_url)
-                                            if "lat" in df.columns and "lon" in df.columns:
-                                                scatter = pdk.Layer(
-                                                    "ScatterplotLayer",
-                                                    data=df,
-                                                    get_position=["lon", "lat"],
-                                                    get_radius=30,
-                                                    get_fill_color=[56, 142, 60],
-                                                    pickable=False,
-                                                )
-                                                view_state = pdk.ViewState(
-                                                    latitude=df["lat"].mean(),
-                                                    longitude=df["lon"].mean(),
-                                                    zoom=13,
-                                                )
-                                                st.pydeck_chart(pdk.Deck(
-                                                    map_style="mapbox://styles/mapbox/light-v9",
-                                                    initial_view_state=view_state,
-                                                    layers=[scatter],
-                                                ), height=300)
-                                    except Exception as e:
-                                        st.error(f"Could not render map for {entry['name']}. Error: {str(e)}")
+                    try:
+                        map_url = entry.get("file_url")
+                        if map_url:
+                            df = pd.read_csv(map_url)
+                            if "lat" in df.columns and "lon" in df.columns:
+                                scatter = pdk.Layer(
+                                    "ScatterplotLayer",
+                                    data=df,
+                                    get_position=["lon", "lat"],
+                                    get_radius=30,
+                                    get_fill_color=[56, 142, 60],
+                                    pickable=False,
+                                )
+                                view_state = pdk.ViewState(
+                                    latitude=df["lat"].mean(),
+                                    longitude=df["lon"].mean(),
+                                    zoom=13,
+                                )
+                                st.pydeck_chart(pdk.Deck(
+                                    map_style="mapbox://styles/mapbox/light-v9",
+                                    initial_view_state=view_state,
+                                    layers=[scatter],
+                                ), height=300)
+                            else:
+                                st.warning("Map could not be rendered: missing lat/lon columns.")
+                        else:
+                            st.warning("No map URL provided.")
+                    except Exception as e:
+                        st.error(f"Could not render map for {entry['name']}. Error: {str(e)}")
 
-                    # with st.container():
-                    #     st.markdown(
-                    #     """
-                    #     <div style="border:1px solid #ddd; padding:20px; border-radius:16px;
-                    #                 background-color:#fdfdfd; margin-bottom:24px;
-                    #                 box-shadow:0 2px 6px rgba(0,0,0,0.05);">
-                    #     """,
-                    #     unsafe_allow_html=True
-                    #     )
+                    st.markdown("</div>", unsafe_allow_html=True)
 
-                    #     st.markdown(f"""
-                    #         <p style='margin-bottom: 6px;'><strong>Name:</strong> {entry['name']}</p>
-                    #         <p style='margin-bottom: 6px;'><strong>Job:</strong> {entry['occupation']}</p>
-                    #         <p style='margin-bottom: 12px;'><strong>Area:</strong> {entry['location']}</p>
-                    #     """, unsafe_allow_html=True)
-
-                    #     # Show weights as a clean table
-                    #     raw_weights = entry.get("weights", {})
-                    #     if raw_weights:
-                    #         st.markdown("**Weights Used:**")
-                    #         weight_df = pd.DataFrame([
-                    #             [col.replace("_dist", "").replace("_", " ").title(), val]
-                    #             for col, val in raw_weights.items()
-                    #         ], columns=["Feature", "Weight"])
-                    #         st.dataframe(
-                    #             weight_df.style.format({"Weight": "{:.2f}"}),
-                    #             use_container_width=True,
-                    #             hide_index=True
-                    #         )
-
-                    #     # Show map preview
-                    #     try:
-                    #         map_url = entry.get("file_url")
-                    #         if map_url:
-                    #             df = pd.read_csv(map_url)
-                    #             if "lat" in df.columns and "lon" in df.columns:
-                    #                 scatter = pdk.Layer(
-                    #                     "ScatterplotLayer",
-                    #                     data=df,
-                    #                     get_position=["lon", "lat"],
-                    #                     get_radius=30,
-                    #                     get_fill_color=[56, 142, 60],
-                    #                     pickable=False,
-                    #                 )
-                    #                 view_state = pdk.ViewState(
-                    #                     latitude=df["lat"].mean(),
-                    #                     longitude=df["lon"].mean(),
-                    #                     zoom=13,
-                    #                 )
-                    #                 st.pydeck_chart(pdk.Deck(
-                    #                     map_style="mapbox://styles/mapbox/light-v9",
-                    #                     initial_view_state=view_state,
-                    #                     layers=[scatter],
-                    #                 ), height=300)
-                    #             else:
-                    #                 st.warning("Map could not be rendered: missing lat/lon.")
-                    #     except Exception as e:
-                    #         st.error(f"Could not render map for {entry['name']}. Error: {str(e)}")
-
-                        st.markdown("</div>", unsafe_allow_html=True)
-        
-    # if not entries:
-    #     st.info("No gallery submissions yet.")
-    # else:
-    #     # 2 columns per row
-    #     for i in range(0, len(entries), 2):
-    #         cols = st.columns(2)
-    #         for j in range(2):
-    #             if i + j >= len(entries):
-    #                 break
-    #             entry = entries[i + j]
-    #             with cols[j]:
-    #                 st.markdown("""
-    #                     <div style="border:1px solid #e0e0e0; padding:18px 22px; border-radius:12px; background:#fff; box-shadow: 0px 1px 4px rgba(0,0,0,0.08); margin-bottom:20px;">
-    #                 """, unsafe_allow_html=True)
-
-    #                 st.markdown(f"**Name:** {entry['name']}  \n**Job:** {entry['occupation']}  \n**Area:** {entry['location']}")
-
-    #                 # Pretty print weights
-    #                 raw_weights = entry.get("weights", {})
-    #                 if raw_weights:
-    #                     st.markdown("**Weights Used:**")
-    #                     weight_df = pd.DataFrame(list({
-    #                         col.replace("_dist", "").replace("_", " ").title(): val
-    #                         for col, val in raw_weights.items()
-    #                     }.items()), columns=["Feature", "Weight"])
-    #                     st.dataframe(weight_df.style.format({"Weight": "{:.2f}"}), use_container_width=True)
-
-    #                 # Map rendering
-    #                 try:
-    #                     map_url = entry.get("file_url")
-    #                     if map_url:
-    #                         df = pd.read_csv(map_url)
-    #                         if "lat" in df.columns and "lon" in df.columns:
-    #                             scatter = pdk.Layer(
-    #                                 "ScatterplotLayer",
-    #                                 data=df,
-    #                                 get_position=["lon", "lat"],
-    #                                 get_radius=30,
-    #                                 get_fill_color=[56, 142, 60],
-    #                                 pickable=False,
-    #                             )
-    #                             view_state = pdk.ViewState(
-    #                                 latitude=df["lat"].mean(),
-    #                                 longitude=df["lon"].mean(),
-    #                                 zoom=13,
-    #                             )
-    #                             st.pydeck_chart(pdk.Deck(
-    #                                 map_style="mapbox://styles/mapbox/light-v9",
-    #                                 initial_view_state=view_state,
-    #                                 layers=[scatter],
-    #                             ), height=300)
-    #                         else:
-    #                             st.warning("Map could not be rendered: missing lat/lon.")
-    #                 except Exception as e:
-    #                     st.error(f"Could not render map for {entry['name']}. Error: {str(e)}")
-
-    #                 st.markdown("</div>", unsafe_allow_html=True)
-
-
-    #         st.markdown("</div>", unsafe_allow_html=True)
 # -----------------------------
 with tab4:
 
