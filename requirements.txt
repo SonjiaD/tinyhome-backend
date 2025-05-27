@@ -5,3 +5,6 @@ numpy
 folium
 matplotlib
 streamlit-folium
+supabase-py
+postgrest
+storage3
