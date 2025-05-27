@@ -142,6 +142,11 @@ if "update" not in st.session_state:
 # -----------------------------
 tab1, tab2, tab3 = st.tabs(["Map", "Data", "Histogram"])
 
+# page = st.selectbox("Navigation", ["Map", "Data", "Histogram"], "About", horizontal = True)
+# ---------------------------------
+
+# Rendering Conditional Sidebar (only for map, data, histogram tabs)
+
 # -----------------------------
 # 🗌️ Tab 1: Map
 # -----------------------------
