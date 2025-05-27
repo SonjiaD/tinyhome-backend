@@ -431,20 +431,25 @@ with tab3:
 # -----------------------------
 # 🖼️ Tab 4: Gallery
 
-
 GALLERY_DIR = "gallery_submissions"
 os.makedirs(GALLERY_DIR, exist_ok=True)
 
 with tab4:
     st.markdown("## Gallery: Explore Shared Tiny Home Maps")
+    st.markdown("""
+    Welcome to the community gallery!
 
-    # --- Upload Trigger Button ---
+    Here, you can see what other users think the best locations for tiny homes are — based on their personal priorities. 
+    View their slider weights, read a bit about them, and explore their generated map!
+    """)
+
+    # Upload section
     with st.expander("Upload Your Map"):
         with st.form("upload_form", clear_on_submit=True):
             name = st.text_input("Your Name")
             occupation = st.text_input("Occupation")
             location = st.text_input("City / Area in Oakland")
-            uploaded_file = st.file_uploader("Upload your saved map CSV or HTML", type=["csv", "html"])
+            uploaded_file = st.file_uploader("Upload your saved map CSV", type=["csv"])
             submit = st.form_submit_button("Submit")
 
             if submit:
@@ -457,10 +462,11 @@ with tab4:
                         f.write(uploaded_file.read())
 
                     weights = {}
-                    if file_ext == ".csv":
-                        df = pd.read_csv(saved_file_path)
-                        # Try to extract weights from columns that match your score_cols
-                        weights = {col: round(df[col].mean(), 3) for col in score_cols if col in df.columns}
+                    df = pd.read_csv(saved_file_path)
+                    for col in score_cols:
+                        if col in df.columns:
+                            # Use the average score to infer importance (normalize later)
+                            weights[col] = round(df[col].mean(), 2)
 
                     metadata = {
                         "name": name,
@@ -471,40 +477,70 @@ with tab4:
                         "ext": file_ext,
                     }
 
-                    metadata_path = os.path.join(GALLERY_DIR, f"{entry_id}.json")
-                    with open(metadata_path, "w") as f:
+                    with open(os.path.join(GALLERY_DIR, f"{entry_id}.json"), "w") as f:
                         json.dump(metadata, f)
 
                     st.success("✅ Map uploaded and added to the gallery!")
                 else:
-                    st.error("Please fill out all fields and upload a file.")
+                    st.error("Please fill out all fields and upload a CSV file.")
 
-    # --- Display Gallery Entries ---
-    # st.markdown("### Shared Maps")
+    st.markdown("### Shared Maps")
     gallery_files = [f for f in os.listdir(GALLERY_DIR) if f.endswith(".json")]
 
     if not gallery_files:
         st.info("No gallery maps yet! Be the first to share yours above.")
     else:
-        for json_file in gallery_files:
+        for json_file in sorted(gallery_files, reverse=True):
             with open(os.path.join(GALLERY_DIR, json_file), "r") as f:
                 entry = json.load(f)
 
-            st.markdown(f"**👤 {entry['name']}** — {entry['occupation']}, *{entry['location']}*")
-            if entry["weights"]:
-                st.markdown(f"**Weights:** `{entry['weights']}`")
+            st.markdown(f"#### Name: {entry['name']}")
+            st.markdown(f"**Job:** {entry['occupation']}")
+            st.markdown(f"**Area:** {entry['location']}")
 
-            if entry["ext"] == ".csv":
-                st.download_button(
-                    label="⬇ Download CSV Map",
-                    data=open(entry["file"], "rb").read(),
-                    file_name=os.path.basename(entry["file"]),
-                    mime="text/csv"
+            # Clean weight labels
+            renamed_weights = {
+                col.replace("_dist", "").replace("_", " ").title(): val
+                for col, val in entry["weights"].items()
+            }
+            st.markdown("**Slider Weights Used:**")
+            st.json(renamed_weights)
+
+            # Show map visualization (read and generate if needed)
+            try:
+                df = pd.read_csv(entry["file"])
+                if "geometry" in df.columns:
+                    df = gpd.GeoDataFrame(df)
+                    if df.crs is None:
+                        df.set_crs(epsg=4326, inplace=True)
+                else:
+                    geometry = gpd.points_from_xy(df["lon"], df["lat"])
+                    df = gpd.GeoDataFrame(df, geometry=geometry)
+                    df.set_crs(epsg=4326, inplace=True)
+
+                scatter_layer = pdk.Layer(
+                    "ScatterplotLayer",
+                    data=df,
+                    get_position=["lon", "lat"],
+                    get_radius=30,
+                    get_fill_color=[56, 142, 60],
+                    pickable=False,
                 )
-            elif entry["ext"] == ".html":
-                with open(entry["file"], "r", encoding="utf-8") as html_file:
-                    html_content = html_file.read()
-                    st.components.v1.html(html_content, height=400, scrolling=True)
+
+                view_state = pdk.ViewState(
+                    latitude=df["lat"].mean(),
+                    longitude=df["lon"].mean(),
+                    zoom=13,
+                )
+
+                st.pydeck_chart(pdk.Deck(
+                    map_style="mapbox://styles/mapbox/light-v9",
+                    initial_view_state=view_state,
+                    layers=[scatter_layer],
+                ), height=400)
+
+            except Exception as e:
+                st.error(f"Could not render map for {entry['name']}. Error: {str(e)}")
 
             st.markdown("---")
 
