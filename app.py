@@ -482,95 +482,42 @@ with tab3:
     if not entries:
         st.info("No gallery submissions yet.")
     else:
-        cols = st.columns(3)
-        for i, entry in enumerate(entries):
-            col = cols[i % 3]
+        for i in range(0, len(entries), 3):
+            cols = st.columns(3)
+            for j in range(3):
+                if i + j >= len(entries):
+                    break
+                entry = entries[i + j]
 
-            with col:
-                weights = entry.get("weights", {})
-                pretty_weights = {
-                    k.replace("_dist", "").replace("_", " ").title(): v
-                    for k, v in weights.items()
-                }
-                weight_df = pd.DataFrame(list(pretty_weights.items()), columns=["Feature", "Weight"])
-                weight_table_html = weight_df.to_html(index=False)
+                with cols[j]:
+                    # User Info
+                    st.markdown(f"""
+                    **Name:** {entry['name']}  
+                    **Job:** {entry['occupation']}  
+                    **Area:** {entry['location']}  
+                    """)
 
-                html = f"""
-                <div style="
-                    background-color: #f9fafb;
-                    border: 1px solid #ddd;
-                    border-radius: 12px;
-                    padding: 16px;
-                    margin-bottom: 16px;
-                    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-                    font-family: sans-serif;
-                ">
-                    <p><strong>Name:</strong> {entry['name']}</p>
-                    <p><strong>Job:</strong> {entry['occupation']}</p>
-                    <p><strong>Area:</strong> {entry['location']}</p>
-                    <p><strong>Weights Used:</strong></p>
-                    {weight_table_html}
-                </div>
-                """
-                from streamlit.components.v1 import html
+                    st.markdown("**Weights Used:**")
 
-from streamlit.components.v1 import html
+                    # Display weights as a readable table
+                    raw_weights = entry.get("weights", {})
+                    if raw_weights:
+                        formatted_weights = {
+                            k.replace("_dist", "").replace("_", " ").title(): v
+                            for k, v in raw_weights.items()
+                        }
+                        df = pd.DataFrame(
+                            list(formatted_weights.items()),
+                            columns=["Feature", "Weight"]
+                        )
+                        st.dataframe(
+                            df.style.format({"Weight": "{:.2f}"}),
+                            use_container_width=True,
+                            hide_index=True
+                        )
 
-for i in range(0, len(entries), 3):
-    row = st.columns(3)
-    for j in range(3):
-        if i + j >= len(entries):
-            break
-        entry = entries[i + j]
-        name = entry["name"]
-        occupation = entry["occupation"]
-        location = entry["location"]
-        weights = entry.get("weights", {})
-
-        # HTML Table rows
-        table_rows = "".join(
-            f"<tr><td>{k.replace('_dist', '').replace('_', ' ').title()}</td><td style='text-align:right;'>{v:.2f}</td></tr>"
-            for k, v in weights.items()
-        )
-
-        # Single card block
-        card_html = f"""
-        <div style="
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #ffffff;
-            border: 1px solid #e6e6e6;
-            border-radius: 14px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            margin-bottom: 20px;
-        ">
-            <p style="margin: 4px 0;"><strong>Name:</strong> {name}</p>
-            <p style="margin: 4px 0;"><strong>Job:</strong> {occupation}</p>
-            <p style="margin: 8px 0;"><strong>Area:</strong> {location}</p>
-
-            <p style="margin-top: 14px; font-weight: 600;">Weights Used:</p>
-            <table style="
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 14px;
-                margin-top: 6px;
-            ">
-                <thead>
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <th style="text-align:left; padding: 4px;">Feature</th>
-                        <th style="text-align:right; padding: 4px;">Weight</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {table_rows}
-                </tbody>
-            </table>
-        </div>
-        """
-        with row[j]:
-            html(card_html, height=270)
-
-
+                    # Separator
+                    st.markdown("---")
 
 
 # -----------------------------
