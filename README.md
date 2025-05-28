@@ -2,6 +2,10 @@
 
 An interactive web app to **rank and map vacant lots** in Oakland, CA for tiny home development using customizable geospatial criteria.
 
+## 🚀 Try It
+
+**Live site**: [tiny-home-backend.streamlit.app](https://tiny-home-backend.streamlit.app)
+
 ## 🔍 What It Does
 
 - Lets users **adjust weights** for 10+ urban planning features (e.g., distance to shelters, transit, housing)
@@ -22,10 +26,6 @@ An interactive web app to **rank and map vacant lots** in Oakland, CA for tiny h
 - 🗺️ Live-updating map & tooltip
 - 🖼️ Supabase-powered map gallery (name, job, neighborhood, weights)
 - 🔒 RLS-secure uploads with cloud storage
-
-## 🚀 Try It
-
-**Live site**: [tiny-home-backend.streamlit.app](https://tiny-home-backend.streamlit.app)
 
 ## 🌱 Future Plans
 
