@@ -227,12 +227,12 @@ with tab1:
             c = candidates.copy()
             norm_scores = []
             for col in score_cols:
-                score_col = 1 / (1 + c[col])
-                norm_col = min_max_normalize(score_col)
+                # score_col = 1 / (1 + c[col])
+                norm_col = min_max_normalize(c[col])
                 norm_scores.append(norm_col)
 
             c["final_score"] = sum(w * s for w, s in zip(weight_array, norm_scores))
-            ranked = c.sort_values("final_score", ascending=False).reset_index(drop=True)
+            ranked = c.sort_values("final_score", ascending=True).reset_index(drop=True)
             top_lots = ranked.head(500).copy()
             top_lots["rank"] = top_lots.index + 1
             st.session_state.top_lots = top_lots
@@ -262,7 +262,6 @@ with tab1:
                     return [165, 214, 167]
                 else:
                     return [232, 245, 233]  # Very light green
-
 
             top_lots["color"] = top_lots["rank"].apply(get_rank_color)
 
@@ -353,16 +352,12 @@ with tab1:
                 tooltip=tooltip,
             )
 
-
             # Save to HTML file
             deck.to_html("latest_map.html")
 
             # Allow download of static HTML map
             with open("latest_map.html", "rb") as f:
                 st.download_button("Download Map as HTML Snapshot", f.read(), file_name="map_snapshot.html")
-
-
-        
 
         st.session_state.update = False
 # -----------------------------
@@ -374,6 +369,19 @@ with tab2:
 
         st.markdown("## Data")
 
+        st.markdown("### How Scores Are Calculated")
+        st.markdown("""
+        Each lot is evaluated by its distance to critical services like transit, housing, and water infrastructure.
+
+        We **normalize** these distances to a 0–1 scale, and then **sum them** using the weights you assign.  
+        This means:
+
+        - **Closer = lower score = better**
+        - **Smaller total distance** across all weighted features = **higher ranked site**
+
+        You can download the full ranked list, see how each feature contributed, and explore visuals below.
+        """)
+
         # Add weights as separate columns
         weight_cols = [f"weight_{col}" for col in score_cols]
         for col in score_cols:
@@ -384,17 +392,39 @@ with tab2:
             top_lots["lon"] = top_lots.geometry.centroid.to_crs(epsg=4326).x
             top_lots["lat"] = top_lots.geometry.centroid.to_crs(epsg=4326).y
 
+        # GRAPHS
+
+        # Display top 5 ranked sites
         st.markdown("### Top 5 Ranked Sites")
         st.dataframe(top_lots[["id", "rank", "final_score", "lon", "lat"] + score_cols].head())
 
+        # Histogram of final scores for top 50 sites
+        # st.markdown("### Score Distribution of Top 50 Sites")
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.hist(top_lots["final_score"].head(50), bins=15, color="#4a6240", edgecolor="white")
+        ax.set_xlabel("Final Score")
+        ax.set_ylabel("Number of Sites")
+        ax.set_title("Histogram of final scores for top 50 sites")
+        st.pyplot(fig)
+
+        # Scatter plot of final score vs. rank for top 500 sites
+        # st.markdown("### Score vs. Rank (Top 500)")
+        fig2, ax2 = plt.subplots(figsize=(8, 4))
+        ax2.scatter(top_lots["rank"], top_lots["final_score"], color="#4a6240", alpha=0.8)
+        ax2.set_xlabel("Rank")
+        ax2.set_ylabel("Final Score")
+        ax2.set_title("Scatter plot of final score vs. rank for top 500 sites")
+        st.pyplot(fig2)
+
         # Histogram of final scores 500 sites
-        st.markdown("### Score Distribution of Top 500 Sites")
+        # st.markdown("### Score Distribution of Top 500 Sites")
         fig, ax = plt.subplots(figsize=(10, hist_height))
         ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
         ax.set_xlabel("Final Score")
         ax.set_ylabel("Frequency")
         st.pyplot(fig)  
 
+        #download button for top 500 ranked sites
         st.markdown("### Download Full Results")
         st.download_button(
             label="Download Top 500 Ranked Lots as CSV",
