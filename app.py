@@ -398,31 +398,36 @@ with tab2:
         st.markdown("### Top 5 Ranked Sites")
         st.dataframe(top_lots[["id", "rank", "final_score", "lon", "lat"] + score_cols].head())
 
-        # Histogram of final scores for top 50 sites
-        # st.markdown("### Score Distribution of Top 50 Sites")
-        fig, ax = plt.subplots(figsize=(8, 4))
-        ax.hist(top_lots["final_score"].head(50), bins=15, color="#4a6240", edgecolor="white")
-        ax.set_xlabel("Final Score")
-        ax.set_ylabel("Number of Sites")
-        ax.set_title("Histogram of final scores for top 50 sites")
-        st.pyplot(fig)
+        # Histogram – Top 50 Ranked Sites
+        st.markdown("### Score Distribution – Top 50 Ranked Sites")
+        fig1, ax1 = plt.subplots(figsize=(5, 2.2))
+        ax1.hist(top_lots["final_score"].head(50), bins=15, color="#4a6240", edgecolor="white")
+        ax1.set_xlabel("Final Score", fontsize=9)
+        ax1.set_ylabel("Sites", fontsize=9)
+        ax1.set_title("Top 50 Score Histogram", fontsize=10)
+        ax1.tick_params(axis='both', labelsize=8)
+        st.pyplot(fig1)
 
-        # Scatter plot of final score vs. rank for top 500 sites
-        # st.markdown("### Score vs. Rank (Top 500)")
-        fig2, ax2 = plt.subplots(figsize=(8, 4))
+        # Scatterplot – Final Score vs. Rank
+        st.markdown("### Final Score vs. Rank")
+        fig2, ax2 = plt.subplots(figsize=(5, 2.2))
         ax2.scatter(top_lots["rank"], top_lots["final_score"], color="#4a6240", alpha=0.8)
-        ax2.set_xlabel("Rank")
-        ax2.set_ylabel("Final Score")
-        ax2.set_title("Scatter plot of final score vs. rank for top 500 sites")
+        ax2.set_xlabel("Rank", fontsize=9)
+        ax2.set_ylabel("Final Score", fontsize=9)
+        ax2.set_title("Score by Rank (Top 500)", fontsize=10)
+        ax2.tick_params(axis='both', labelsize=8)
         st.pyplot(fig2)
 
-        # Histogram of final scores 500 sites
-        # st.markdown("### Score Distribution of Top 500 Sites")
-        fig, ax = plt.subplots(figsize=(10, hist_height))
-        ax.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="black")
-        ax.set_xlabel("Final Score")
-        ax.set_ylabel("Frequency")
-        st.pyplot(fig)  
+        # Histogram – All 500 Ranked Sites
+        st.markdown("### Score Distribution – All 500 Ranked Sites")
+        fig3, ax3 = plt.subplots(figsize=(5, 2.2))
+        ax3.hist(top_lots["final_score"], bins=30, color="#4a6240", edgecolor="white")
+        ax3.set_xlabel("Final Score", fontsize=9)
+        ax3.set_ylabel("Sites", fontsize=9)
+        ax3.set_title("Histogram of All Final Scores", fontsize=10)
+        ax3.tick_params(axis='both', labelsize=8)
+        st.pyplot(fig3)
+
 
         #download button for top 500 ranked sites
         st.markdown("### Download Full Results")
