@@ -36,3 +36,55 @@ An interactive web app to **rank and map vacant lots** in Oakland, CA for tiny h
 ## 👨‍🔬 Built by
 
 **Kalyan Lab @ UBC** — empowering data-driven urban equity solutions.
+
+## 🧑‍💻 Run Locally
+
+Follow these steps to set up and launch the app on your machine:
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/oakland-tiny-homes.git
+cd oakland-tiny-homes
+```
+
+### 2. Set Up a Virtual Environment
+```bash
+python -m venv .venv
+```
+
+### 3. Activate it:
+
+- **Windows**:
+  ```bash
+  .venv\Scripts\activate
+  ```
+
+- **Mac/Linux**:
+  ```bash
+  source .venv/bin/activate
+  ```
+
+### 4. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+- **If requirements.txt is missing:**:
+  ```bash
+    pip install streamlit geopandas matplotlib pydeck pandas supabase
+  ```
+
+### 5. Add GeoJSON Data
+Ensure the following file is in the root folder:
+```bash
+candidates_with_features.geojson
+```
+This contains the geospatial data needed for scoring and mapping.
+
+### 6. Run the App
+```bash
+streamlit run app.py
+```
+Replace app.py with your actual script name if different.
+
