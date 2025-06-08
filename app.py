@@ -556,6 +556,13 @@ with tab3:
 with tab4:
 
     st.markdown("## About This Tool")
+    st.image("verticalParklet.png")
+    st.markdown(
+        "<div style='padding-bottom: 10px; font-size: 0.75rem; color: gray; text-align: center;'>" \
+        "Figure 1. Example of vertically spaced tiny home in parking area."
+        "</div>",
+        unsafe_allow_html=True
+    )
     st.write("""
     This tool helps identify and rank vacant lots in Oakland, California
     for potential tiny home development. Using multiple spatial
