@@ -5,9 +5,9 @@ An interactive web app to **rank and map vacant lots** in Oakland, CA for tiny h
 ## 🚀 Try It
 
 **Live site**: 
-Current Link [https://tiny-home-backend.streamlit.app/](https://tiny-home-backend.streamlit.app/)
+***Current Link*** [https://tiny-home-backend.streamlit.app/](https://tiny-home-backend.streamlit.app/)
+***Previous Link*** [https://tinyhome-backend.onrender.com/](https://tinyhome-backend.onrender.com/)
 
-Previous Link [https://tinyhome-backend.onrender.com/](https://tinyhome-backend.onrender.com/)
 
 ## 🔍 What It Does
 
