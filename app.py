@@ -13,7 +13,6 @@ from io import BytesIO
 import streamlit.components.v1 as components
 from streamlit.components.v1 import html
 
-
 # -----------------------------
 
 # setting up Supabase client
@@ -157,7 +156,7 @@ if "update" not in st.session_state:
 # -----------------------------
 # 🔄 Tabs
 # -----------------------------
-tab1, tab2, tab3, tab4 = st.tabs(["Map", "Data","Gallery", "About"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Map", "Data","Gallery", "About", "Participatory"])
 # -----------------------------
 # 🗌️ Tab 1: Map
 # -----------------------------
@@ -578,3 +577,99 @@ with tab4:
 
     Built by Kalyan Lab at UBC with ❤️ for equitable urban planning.
     """)
+
+# -----------------------------
+# 🌍️ Tab 5: Participatory (AHP)
+# -----------------------------
+with tab5:
+    st.markdown("## Help Us Understand What Matters Most")
+    st.markdown("""
+    In this section, you can participate in shaping how we evaluate ideal sites for tiny homes in Oakland.
+
+    We'll show you a few pairs of features. Just tell us which one you think is **more important** and **how much more**.
+
+    Your responses will be used to compute weights — and help inform future planning.
+    """)
+
+    # Feature names (short display names, linked to score_cols)
+    feature_map = {
+        "Transit Access": "transit_dist",
+        "Proximity to Housing Services": "public_housing_dist",
+        "Access to Water Infrastructure": "water_infrastructure_dist",
+        "Near City Facilities": "city_facility_dist",
+        "Proximity to Mobile Vending": "mobile_vending_dist",
+        "Assisted Housing Nearby": "assisted_housing_dist",
+        "Homeless Services": "homeless_service_dist",
+        "Public Infrastructure": "general_plan_dist"
+    }
+
+    features = list(feature_map.keys())
+
+    # Generate all unique pairwise combinations (AHP style)
+    import itertools
+    pairs = list(itertools.combinations(features, 2))
+
+    if "comparisons" not in st.session_state:
+        st.session_state.comparisons = {}
+
+    st.markdown("### Pairwise Comparisons")
+
+    for f1, f2 in pairs[:5]:  # Limit to 5 for now to reduce overload
+        key = f"{f1}__vs__{f2}"
+        st.session_state.comparisons[key] = st.select_slider(
+            f"How much more important is **{f1}** compared to **{f2}**?",
+            options=[
+                f"{f1} much more", f"{f1} more", "Equal", f"{f2} more", f"{f2} much more"
+            ],
+            key=key
+        )
+
+    # Button to compute weights
+    if st.button("Compute My Priorities"):
+        import numpy as np
+
+        size = len(features)
+        ahp_matrix = np.ones((size, size))
+        for (i, f1) in enumerate(features):
+            for (j, f2) in enumerate(features):
+                if i >= j:
+                    continue
+                key = f"{f1}__vs__{f2}"
+                if key not in st.session_state.comparisons:
+                    continue
+                val = st.session_state.comparisons[key]
+                scale = {
+                    f"{f1} much more": 5,
+                    f"{f1} more": 3,
+                    "Equal": 1,
+                    f"{f2} more": 1/3,
+                    f"{f2} much more": 1/5
+                }[val]
+                ahp_matrix[i][j] = scale
+                ahp_matrix[j][i] = 1 / scale
+
+        # Compute normalized principal eigenvector (AHP weights)
+        eigvals, eigvecs = np.linalg.eig(ahp_matrix)
+        max_index = np.argmax(eigvals)
+        weights = np.real(eigvecs[:, max_index])
+        weights = weights / weights.sum()
+
+        # Show results
+        st.success("Here's what you care about most:")
+        st.bar_chart({features[i]: weights[i] for i in range(len(features))})
+
+        # Map back to score_cols
+        mapped_weights = {
+            feature_map[features[i]]: float(round(weights[i], 4))
+            for i in range(len(features))
+        }
+
+        # Store for export
+        st.session_state.ahp_weights = mapped_weights
+
+        # Download as JSON or CSV
+        import io
+        import pandas as pd
+        csv = pd.DataFrame([mapped_weights]).to_csv(index=False)
+        st.download_button("Download My Weights (CSV)", data=csv, file_name="my_ahp_weights.csv")
+
