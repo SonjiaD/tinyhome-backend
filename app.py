@@ -156,7 +156,7 @@ if "update" not in st.session_state:
 # -----------------------------
 # 🔄 Tabs
 # -----------------------------
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["Map", "Data","Gallery", "About", "Participatory"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Map", "Data","Gallery", "About", "AHP", "AHPSlow"])
 # -----------------------------
 # 🗌️ Tab 1: Map
 # -----------------------------
@@ -458,6 +458,9 @@ with tab3:
             name = st.text_input("Your Name")
             occupation = st.text_input("Occupation")
             location = st.text_input("City / Area in Oakland")
+            method = st.text_input("Method Used (WSM or AHP)") 
+            #TODO
+            #maybe update this so they can only select between 2 options
             uploaded_file = st.file_uploader("Upload CSV file of your map", type=["csv"])
             submit = st.form_submit_button("Submit")
 
@@ -582,52 +585,64 @@ with tab4:
 # 🌍️ Tab 5: Participatory (AHP)
 # -----------------------------
 with tab5:
-    st.markdown("## Help Us Understand What Matters Most")
+    st.markdown("## AHP Method")
+
+    st.markdown("### Help Us Understand What Matters Most")
     st.markdown("""
-    In this section, you can participate in shaping how we evaluate ideal sites for tiny homes in Oakland.
+    You can help shape how we evaluate the best locations for tiny homes in Oakland.
 
-    We'll show you a few pairs of features. Just tell us which one you think is **more important** and **how much more**.
+    We'll show you pairs of features that affect site selection.  
+    Just tell us which one is more important and how much more important it is.
 
-    Your responses will be used to compute weights — and help inform future planning.
+    Your responses will generate a custom priority score for each feature. You can download your results or use them to inform the map ranking.
     """)
 
-    # Feature names (short display names, linked to score_cols)
+    # ✅ Final, curated set of user-friendly features for AHP
     feature_map = {
         "Transit Access": "transit_dist",
-        "Proximity to Housing Services": "public_housing_dist",
+        "Homeless Services Nearby": "homeless_service_dist",
+        "Affordable Housing Nearby": "public_housing_dist",
         "Access to Water Infrastructure": "water_infrastructure_dist",
-        "Near City Facilities": "city_facility_dist",
-        "Proximity to Mobile Vending": "mobile_vending_dist",
-        "Assisted Housing Nearby": "assisted_housing_dist",
-        "Homeless Services": "homeless_service_dist",
-        "Public Infrastructure": "general_plan_dist"
+        "Nearby City Facilities": "city_facility_dist",
+        "Urban Plan Priority Area": "general_plan_dist"
     }
 
     features = list(feature_map.keys())
 
-    # Generate all unique pairwise combinations (AHP style)
+    # Generate all unique pairwise combinations
     import itertools
     pairs = list(itertools.combinations(features, 2))
 
+    # Store user responses
     if "comparisons" not in st.session_state:
         st.session_state.comparisons = {}
 
+    ##pair wise comparison sliders
+
     st.markdown("### Pairwise Comparisons")
 
-    for f1, f2 in pairs[:5]:  # Limit to 5 for now to reduce overload
+    for f1, f2 in pairs:
         key = f"{f1}__vs__{f2}"
-        st.session_state.comparisons[key] = st.select_slider(
-            f"How much more important is **{f1}** compared to **{f2}**?",
-            options=[
-                f"{f1} much more", f"{f1} more", "Equal", f"{f2} more", f"{f2} much more"
-            ],
-            key=key
-        )
+        with st.container():
+            st.markdown(f"""
+            <div style='margin-top: 1.2rem; margin-bottom: 0.4rem; font-size: 1rem; font-weight: 500;'>
+            How much more important is <strong>{f1}</strong> compared to <strong>{f2}</strong>?
+            </div>
+            """, unsafe_allow_html=True)
 
-    # Button to compute weights
-    if st.button("Compute My Priorities"):
+            st.session_state.comparisons[key] = st.select_slider(
+                label="",  # empty so it doesn’t duplicate the prompt
+                options=[
+                    f"{f1} much more", f"{f1} more", "Equal", f"{f2} more", f"{f2} much more"
+                ],
+                key=key
+            )
+
+    #button to compute AHP weights
+    if st.button("Compute Priorities"):
         import numpy as np
 
+        #AHP matrix for pairwise comparisons
         size = len(features)
         ahp_matrix = np.ones((size, size))
         for (i, f1) in enumerate(features):
@@ -648,28 +663,239 @@ with tab5:
                 ahp_matrix[i][j] = scale
                 ahp_matrix[j][i] = 1 / scale
 
-        # Compute normalized principal eigenvector (AHP weights)
+        # Compute principal eigenvector (priority weights)
         eigvals, eigvecs = np.linalg.eig(ahp_matrix)
         max_index = np.argmax(eigvals)
         weights = np.real(eigvecs[:, max_index])
         weights = weights / weights.sum()
 
-        # Show results
-        st.success("Here's what you care about most:")
+        # Show as bar chart
+        st.success("Here's what you value most:")
         st.bar_chart({features[i]: weights[i] for i in range(len(features))})
 
-        # Map back to score_cols
+        # Map to score_cols for backend use
         mapped_weights = {
             feature_map[features[i]]: float(round(weights[i], 4))
             for i in range(len(features))
         }
 
-        # Store for export
         st.session_state.ahp_weights = mapped_weights
 
-        # Download as JSON or CSV
-        import io
+        # Offer CSV download
         import pandas as pd
         csv = pd.DataFrame([mapped_weights]).to_csv(index=False)
-        st.download_button("Download My Weights (CSV)", data=csv, file_name="my_ahp_weights.csv")
+        st.download_button(
+            "Download Weights as CSV",
+            data=csv,
+            file_name="my_ahp_weights.csv"
+        )
 
+        st.markdown("### Map Based on Your Priorities")
+        with st.spinner("Generating map..."):
+
+            c = candidates.copy()
+            norm_scores = []
+            for col in score_cols:
+                norm_col = min_max_normalize(c[col])
+                norm_scores.append(norm_col)
+
+            ahp_weight_array = np.array([mapped_weights.get(col, 0.0) for col in score_cols])
+            ahp_weight_array /= ahp_weight_array.sum()
+
+            c["final_score"] = sum(w * s for w, s in zip(ahp_weight_array, norm_scores))
+            ranked = c.sort_values("final_score", ascending=True).reset_index(drop=True)
+            top_lots = ranked.head(500).copy()
+            top_lots["rank"] = top_lots.index + 1
+
+            # Coordinates
+            top_lots = top_lots.to_crs(epsg=3857)
+            top_lots["lon"] = top_lots.geometry.centroid.to_crs(epsg=4326).x
+            top_lots["lat"] = top_lots.geometry.centroid.to_crs(epsg=4326).y
+
+            # Score normalization
+            min_score = top_lots["final_score"].min()
+            max_score = top_lots["final_score"].max()
+            score_range = max_score - min_score
+            top_lots["normalized_score"] = (top_lots["final_score"] - min_score) / score_range
+
+            # Coloring
+            def get_rank_color(rank):
+                if rank <= 100:
+                    return [27, 94, 32]
+                elif rank <= 200:
+                    return [56, 142, 60]
+                elif rank <= 300:
+                    return [102, 187, 106]
+                elif rank <= 400:
+                    return [165, 214, 167]
+                else:
+                    return [232, 245, 233]
+
+            top_lots["color"] = top_lots["rank"].apply(get_rank_color)
+
+            # View state
+            center = [top_lots["lat"].mean(), top_lots["lon"].mean()]
+            scatter = pdk.Layer(
+                "ScatterplotLayer",
+                data=top_lots,
+                get_position=["lon", "lat"],
+                get_radius=30,
+                get_fill_color="color",
+                pickable=True,
+                radius_min_pixels=3,
+                radius_max_pixels=10,
+                auto_highlight=True,
+            )
+
+            view_state = pdk.ViewState(
+                latitude=center[0],
+                longitude=center[1],
+                zoom=13,
+                pitch=0,
+            )
+
+            tooltip = {
+                "html": "<b>Rank:</b> {rank}<br><b>Score:</b> {final_score}",
+                "style": {"backgroundColor": "white", "color": "#4a6240", "fontSize": "14px"},
+            }
+
+            st.pydeck_chart(pdk.Deck(
+                map_style="mapbox://styles/mapbox/light-v9",
+                initial_view_state=view_state,
+                layers=[scatter],
+                tooltip=tooltip,
+            ), height=map_height)
+
+
+        #might consider removing this 
+        # display values for debugging
+        st.markdown("### Raw Weights (for use in Map Tab):")
+        st.json(mapped_weights)
+
+# -----------------------------
+# 📊 Tab 6: My Weights (Simple MCDM)
+# -----------------------------
+with tab6:
+    st.markdown("## Prioritize the Features You Care About Most")
+
+    st.markdown("""
+    Adjust the sliders to indicate how important each feature is when choosing where to place tiny homes.
+    The total should add up to **100%**.
+    """)
+
+    # Define your six features and their corresponding data column
+    feature_labels = {
+        "transit_dist": "Transit Access",
+        "homeless_service_dist": "Homeless Services Nearby",
+        "public_housing_dist": "Affordable Housing Nearby",
+        "water_infrastructure_dist": "Access to Water Infrastructure",
+        "city_facility_dist": "Nearby City Facilities",
+        "general_plan_dist": "Urban Plan Priority Area"
+    }
+
+    if "simple_weights" not in st.session_state:
+        st.session_state.simple_weights = {k: 0.0 for k in feature_labels}
+
+    total_weight = 0
+    for col_key, label in feature_labels.items():
+        st.session_state.simple_weights[col_key] = st.slider(
+            f"{label}",
+            min_value=0,
+            max_value=100,
+            value=int(st.session_state.simple_weights.get(col_key, 0)),
+            step=1,
+            key=f"slider_{col_key}"
+        )
+        total_weight += st.session_state.simple_weights[col_key]
+
+    st.markdown(f"**Total Weight: `{total_weight}%`**")
+
+    if total_weight != 100:
+        st.warning("Please make sure the weights add up to 100% to continue.")
+    else:
+        if st.button("Generate Personalized Map"):
+            with st.spinner("Creating map with your preferences..."):
+
+                # Normalize weights
+                weights = {k: v / 100.0 for k, v in st.session_state.simple_weights.items()}
+                weight_array = np.array(list(weights.values()))
+
+                # Normalize all feature scores
+                c = candidates.copy()
+                norm_scores = []
+                for col in feature_labels:
+                    norm_col = min_max_normalize(c[col])
+                    norm_scores.append(norm_col)
+
+                c["final_score"] = sum(w * s for w, s in zip(weight_array, norm_scores))
+                ranked = c.sort_values("final_score", ascending=True).reset_index(drop=True)
+                top_lots = ranked.head(500).copy()
+                top_lots["rank"] = top_lots.index + 1
+
+                top_lots = top_lots.to_crs(epsg=3857)
+                top_lots["lon"] = top_lots.geometry.centroid.to_crs(epsg=4326).x
+                top_lots["lat"] = top_lots.geometry.centroid.to_crs(epsg=4326).y
+
+                min_score = top_lots["final_score"].min()
+                max_score = top_lots["final_score"].max()
+                score_range = max_score - min_score
+                top_lots["normalized_score"] = (top_lots["final_score"] - min_score) / score_range
+
+                def get_rank_color(rank):
+                    if rank <= 100:
+                        return [27, 94, 32]
+                    elif rank <= 200:
+                        return [56, 142, 60]
+                    elif rank <= 300:
+                        return [102, 187, 106]
+                    elif rank <= 400:
+                        return [165, 214, 167]
+                    else:
+                        return [232, 245, 233]
+
+                top_lots["color"] = top_lots["rank"].apply(get_rank_color)
+
+                center = [top_lots["lat"].mean(), top_lots["lon"].mean()]
+                scatter = pdk.Layer(
+                    "ScatterplotLayer",
+                    data=top_lots,
+                    get_position=["lon", "lat"],
+                    get_radius=30,
+                    get_fill_color="color",
+                    pickable=True,
+                    radius_min_pixels=3,
+                    radius_max_pixels=10,
+                    auto_highlight=True,
+                )
+
+                view_state = pdk.ViewState(
+                    latitude=center[0],
+                    longitude=center[1],
+                    zoom=13,
+                    pitch=0,
+                )
+
+                tooltip = {
+                    "html": "<b>Rank:</b> {rank}<br><b>Score:</b> {final_score}",
+                    "style": {"backgroundColor": "white", "color": "#4a6240", "fontSize": "14px"},
+                }
+
+                st.pydeck_chart(pdk.Deck(
+                    map_style="mapbox://styles/mapbox/light-v9",
+                    initial_view_state=view_state,
+                    layers=[scatter],
+                    tooltip=tooltip,
+                ), height=map_height)
+
+                # Save HTML snapshot
+                deck = pdk.Deck(
+                    map_style="mapbox://styles/mapbox/light-v9",
+                    initial_view_state=view_state,
+                    layers=[scatter],
+                    tooltip=tooltip,
+                )
+                deck.to_html("latest_simple_map.html")
+                with open("latest_simple_map.html", "rb") as f:
+                    st.download_button("Download Map as HTML Snapshot", f.read(), file_name="simple_map_snapshot.html")
+
+    
