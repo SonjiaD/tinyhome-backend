@@ -139,10 +139,19 @@ def min_max_normalize(series):
 
 candidates = load_candidates()
 score_cols = [
-    "homeless_service_dist", "transit_dist", "assisted_housing_dist",
-    "public_housing_dist", "city_facility_dist", "general_plan_dist",
-    "water_fountain_dist", "man_water_dist", "mobile_vending_dist",
-    "water_infrastructure_dist"
+    "homeless_service_dist", 
+    "transit_dist", 
+    "assisted_housing_dist",
+    "public_housing_dist", 
+    "city_facility_dist", 
+    "general_plan_dist",
+    "water_fountain_dist", 
+    "man_water_dist", 
+    "mobile_vending_dist",
+    "water_infrastructure_dist", 
+    "streams_oakland_dist", 
+    "sewer_collection_dist",
+    "wildfire_dist"
 ]
 
 # -----------------------------
