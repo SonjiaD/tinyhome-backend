@@ -50,11 +50,8 @@ try:
 except ValueError:
     vh = 700  # fallback
 
-
 map_height = int(0.75 * vh)      # 75% of screen for map
 hist_height = int(0.7 * vh / 100)  # inches for matplotlib (approx 100px/in)
-
-
 
 # -----------------------------
 #trying to add lightweight warm-up endpoint
@@ -131,8 +128,20 @@ st.markdown("""
 # -----------------------------
 @st.cache_data
 def load_candidates():
-    return gpd.read_file("candidates_with_features.geojson")
-
+    df = gpd.read_file("candidates_with_features.geojson")
+    for col in [
+        "streams_oakland_dist", 
+        "transit_dist", 
+        "homeless_service_dist", 
+        "public_housing_dist", 
+        "city_facility_dist", "general_plan_dist",
+        "water_infrastructure_dist", "assisted_housing_dist", 
+        "mobile_vending_dist", "water_fountain_dist", 
+        "man_water_dist", "stream_oakland_dist", "sewer_collection_dist", "wildfire_dist"
+    ]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(df[col].mean())
+    return df
 @st.cache_data
 def min_max_normalize(series):
     return (series - series.min()) / (series.max() - series.min()) if series.max() != series.min() else 0
@@ -165,7 +174,7 @@ if "update" not in st.session_state:
 # -----------------------------
 # 🔄 Tabs
 # -----------------------------
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Map", "Data","Gallery", "About", "AHP", "AHPSlow"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Map", "Data","Gallery", "About", "AHP", "Simple MCDM"])
 # -----------------------------
 # 🗌️ Tab 1: Map
 # -----------------------------
@@ -794,13 +803,21 @@ with tab6:
 
     # Define your six features and their corresponding data column
     feature_labels = {
-        "transit_dist": "Transit Access",
         "homeless_service_dist": "Homeless Services Nearby",
+        "transit_dist": "Transit Access",
+        "assisted_housing_dist": "Assisted Housing Nearby",
         "public_housing_dist": "Affordable Housing Nearby",
-        "water_infrastructure_dist": "Access to Water Infrastructure",
         "city_facility_dist": "Nearby City Facilities",
-        "general_plan_dist": "Urban Plan Priority Area"
+        "general_plan_dist": "Urban Plan Priority Area",
+        "water_fountain_dist": "Public Water Fountain Nearby",
+        "man_water_dist": "Manual Water Access Nearby",
+        "mobile_vending_dist": "Mobile Vending Access",
+        "water_infrastructure_dist": "Access to Water Infrastructure",
+        "streams_oakland_dist": "Proximity to Oakland Streams",
+        "sewer_collection_dist": "Sewer Collection Distance",
+        "wildfire_dist": "Wildfire Risk Proximity"
     }
+
 
     if "simple_weights" not in st.session_state:
         st.session_state.simple_weights = {k: 0.0 for k in feature_labels}
